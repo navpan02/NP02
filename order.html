@@ -65,20 +65,11 @@
         </div>
         <div class="plan-card-name">Basic</div>
         <div class="plan-card-desc">Essential seasonal care for a clean, weed-free lawn</div>
-        <div class="plan-tiers">
-          <div class="plan-tier-row">
-            <span class="plan-tier-label">0 – 1,000 sqft</span>
-            <span class="plan-tier-rate">$0.10/sqft</span>
-          </div>
-          <div class="plan-tier-row">
-            <span class="plan-tier-label">1,001 – 5,000 sqft</span>
-            <span class="plan-tier-rate">$0.09/sqft</span>
-          </div>
-          <div class="plan-tier-row">
-            <span class="plan-tier-label">5,000+ sqft</span>
-            <span class="plan-tier-rate">$0.08/sqft</span>
-          </div>
-        </div>
+        <ul class="plan-features">
+          <li>Weed control (2&times;/year)</li>
+          <li>Fertilization (2&times;/year)</li>
+          <li>Annual soil test</li>
+        </ul>
         <div class="plan-select-indicator"></div>
       </div>
 
@@ -89,20 +80,12 @@
         </div>
         <div class="plan-card-name">Standard</div>
         <div class="plan-card-desc">Complete care for consistently great results all year</div>
-        <div class="plan-tiers">
-          <div class="plan-tier-row">
-            <span class="plan-tier-label">0 – 1,000 sqft</span>
-            <span class="plan-tier-rate">$0.20/sqft</span>
-          </div>
-          <div class="plan-tier-row">
-            <span class="plan-tier-label">1,001 – 5,000 sqft</span>
-            <span class="plan-tier-rate">$0.18/sqft</span>
-          </div>
-          <div class="plan-tier-row">
-            <span class="plan-tier-label">5,000+ sqft</span>
-            <span class="plan-tier-rate">$0.16/sqft</span>
-          </div>
-        </div>
+        <ul class="plan-features">
+          <li>Weed control (4&times;/year)</li>
+          <li>Fertilization (4&times;/year)</li>
+          <li>Grub &amp; insect prevention</li>
+          <li>Soil conditioning</li>
+        </ul>
         <div class="plan-select-indicator"></div>
       </div>
 
@@ -112,20 +95,12 @@
         </div>
         <div class="plan-card-name">Premium</div>
         <div class="plan-card-desc">100% organic treatments — safe for people, pets &amp; planet</div>
-        <div class="plan-tiers">
-          <div class="plan-tier-row">
-            <span class="plan-tier-label">0 – 1,000 sqft</span>
-            <span class="plan-tier-rate">$0.30/sqft</span>
-          </div>
-          <div class="plan-tier-row">
-            <span class="plan-tier-label">1,001 – 5,000 sqft</span>
-            <span class="plan-tier-rate">$0.27/sqft</span>
-          </div>
-          <div class="plan-tier-row">
-            <span class="plan-tier-label">5,000+ sqft</span>
-            <span class="plan-tier-rate">$0.25/sqft</span>
-          </div>
-        </div>
+        <ul class="plan-features">
+          <li>Organic weed control (4&times;/year)</li>
+          <li>Organic fertilization (4&times;/year)</li>
+          <li>Compost top-dressing</li>
+          <li>Eco-certification report</li>
+        </ul>
         <div class="plan-select-indicator"></div>
       </div>
 
@@ -208,22 +183,58 @@
   <section class="order-step" id="step-3">
     <div class="step-heading">
       <div class="step-eyebrow">Step 3 of 4</div>
-      <h2 class="step-title">How Big Is Your Property?</h2>
-      <p class="step-sub">Enter your lawn's square footage to get an instant monthly quote. Not sure? Use a rough estimate — we'll verify on site.</p>
+      <h2 class="step-title">How Big Is Your Lawn?</h2>
+      <p class="step-sub">We'll look up your property from your address automatically. You can review and adjust the result before continuing.</p>
     </div>
 
     <div id="step3-error" class="step-error">Please enter a valid square footage (minimum 100 sqft).</div>
 
     <div class="sqft-card">
-      <label class="field-group" for="sqft-input" style="margin-bottom:0">
-        <span style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#5a7a67;margin-bottom:7px">Lawn Area *</span>
-      </label>
-      <div class="sqft-input-wrap">
-        <input type="number" id="sqft-input" placeholder="2500" min="100" max="999999"
-               oninput="updateQuote()" onkeyup="updateQuote()" />
-        <span class="sqft-unit">sqft</span>
+
+      <!-- ── Lookup status banner ── -->
+      <div class="lookup-banner lookup-loading" id="lookup-loading">
+        <div class="lookup-spinner"></div>
+        <div>
+          <strong>Looking up your property…</strong>
+          <span id="lookup-addr"></span>
+        </div>
       </div>
-      <p class="sqft-hint">Tip: Average US lawn is 10,000 sqft. A typical suburban yard is 2,000 – 5,000 sqft.</p>
+
+      <div class="lookup-banner lookup-found" id="lookup-found">
+        <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 0 0 1.946-.806 3.42 3.42 0 0 1 4.438 0 3.42 3.42 0 0 0 1.946.806 3.42 3.42 0 0 1 3.138 3.138 3.42 3.42 0 0 0 .806 1.946 3.42 3.42 0 0 1 0 4.438 3.42 3.42 0 0 0-.806 1.946 3.42 3.42 0 0 1-3.138 3.138 3.42 3.42 0 0 0-1.946.806 3.42 3.42 0 0 1-4.438 0 3.42 3.42 0 0 0-1.946-.806 3.42 3.42 0 0 1-3.138-3.138 3.42 3.42 0 0 0-.806-1.946 3.42 3.42 0 0 1 0-4.438 3.42 3.42 0 0 0 .806-1.946 3.42 3.42 0 0 1 3.138-3.138z"/></svg>
+        <div>
+          <strong>Property detected: <span id="lookup-sqft">—</span> sqft</strong>
+          <span>Source: <span id="lookup-source">—</span> — adjust below if needed</span>
+        </div>
+      </div>
+
+      <div class="lookup-banner lookup-notfound" id="lookup-notfound">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <div>
+          <strong>Property not found in OpenStreetMap</strong>
+          <span>No worries — enter your lawn area below manually. We verify on-site during your free assessment.</span>
+        </div>
+      </div>
+
+      <div class="lookup-banner lookup-error" id="lookup-error">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div>
+          <strong>Lookup unavailable right now</strong>
+          <span>Please enter your lawn area manually below.</span>
+        </div>
+        <button class="lookup-retry" onclick="lookupPropertySize()">Retry</button>
+      </div>
+
+      <!-- ── Input ── -->
+      <div style="margin-top:20px">
+        <span style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#5a7a67;margin-bottom:7px">Lawn Area *</span>
+        <div class="sqft-input-wrap">
+          <input type="number" id="sqft-input" placeholder="2500" min="100" max="999999"
+                 oninput="updateQuote()" onkeyup="updateQuote()" />
+          <span class="sqft-unit">sqft</span>
+        </div>
+        <p class="sqft-hint">Typical suburban yard: 2,000 – 5,000 sqft &bull; Average US lawn: ~10,000 sqft</p>
+      </div>
 
       <!-- Live quote preview -->
       <div class="quote-preview" id="quote-preview">
@@ -395,51 +406,41 @@
 <script src="nav.js"></script>
 <script>
 /* ══════════════════════════════════════
-   PRICING DATA
+   PRICING DATA (hidden from user — used for calculation only)
 ══════════════════════════════════════ */
 const PLANS = {
   Basic: {
     label: 'Basic',
     desc: 'Essential seasonal care',
     tiers: [
-      { max: 1000,      rate: 0.10 },
-      { max: 5000,      rate: 0.09 },
-      { max: Infinity,  rate: 0.08 }
+      { max: 1000,     rate: 0.10 },
+      { max: 5000,     rate: 0.09 },
+      { max: Infinity, rate: 0.08 }
     ]
   },
   Standard: {
     label: 'Standard',
     desc: 'Complete year-round care',
     tiers: [
-      { max: 1000,      rate: 0.20 },
-      { max: 5000,      rate: 0.18 },
-      { max: Infinity,  rate: 0.16 }
+      { max: 1000,     rate: 0.20 },
+      { max: 5000,     rate: 0.18 },
+      { max: Infinity, rate: 0.16 }
     ]
   },
   Premium: {
     label: 'Premium',
     desc: '100% organic treatments',
     tiers: [
-      { max: 1000,      rate: 0.30 },
-      { max: 5000,      rate: 0.27 },
-      { max: Infinity,  rate: 0.25 }
+      { max: 1000,     rate: 0.30 },
+      { max: 5000,     rate: 0.27 },
+      { max: Infinity, rate: 0.25 }
     ]
   }
 };
 
-/* ── State ── */
-let state = {
-  plan:   null,
-  street: '',
-  city:   '',
-  st:     '',
-  zip:    '',
-  notes:  '',
-  sqft:   null,
-  rate:   null,
-  total:  null
-};
-
+/* ── App state ── */
+let state = { plan: null, street: '', city: '', st: '', zip: '', notes: '',
+              sqft: null, rate: null, total: null };
 let currentStep = 1;
 
 /* ══════════════════════════════════════
@@ -450,6 +451,101 @@ function selectPlan(el) {
   el.classList.add('selected');
   state.plan = el.dataset.plan;
   document.getElementById('step1-error').classList.remove('show');
+}
+
+/* ══════════════════════════════════════
+   PROPERTY SIZE LOOKUP
+   — Nominatim (OpenStreetMap) geocoding
+   — Overpass API for building footprint
+   Both are free, no API key required.
+══════════════════════════════════════ */
+async function lookupPropertySize() {
+  const addrStr = [state.street, state.city, state.st, state.zip, 'USA']
+    .filter(Boolean).join(', ');
+
+  setLookupState('loading', addrStr);
+
+  try {
+    /* 1. Geocode with Nominatim ─────────────────── */
+    const geoUrl = 'https://nominatim.openstreetmap.org/search?' +
+      new URLSearchParams({ q: addrStr, format: 'json', limit: 1, addressdetails: 1 });
+
+    const geoRes  = await fetch(geoUrl, { headers: { 'Accept-Language': 'en-US,en' } });
+    const geoData = await geoRes.json();
+
+    if (!geoData.length) { setLookupState('notfound'); return; }
+
+    const lat = parseFloat(geoData[0].lat);
+    const lon = parseFloat(geoData[0].lon);
+
+    /* 2. Overpass: prefer lot boundary, fall back to building footprint ─── */
+    const overpassQuery =
+      `[out:json][timeout:12];` +
+      `(way(around:50,${lat},${lon})["landuse"~"^(residential|garden|grass|meadow)$"];` +
+      ` way(around:60,${lat},${lon})["building"];` +
+      ` way(around:60,${lat},${lon})["leisure"="garden"];);` +
+      `out geom;`;
+
+    const ovRes  = await fetch('https://overpass-api.de/api/interpreter',
+      { method: 'POST', body: overpassQuery });
+    const ovData = await ovRes.json();
+
+    if (!ovData.elements || !ovData.elements.length) { setLookupState('notfound'); return; }
+
+    /* Prefer lot/landuse polygon over building footprint */
+    const lot      = ovData.elements.find(e => e.tags && (e.tags.landuse || e.tags.leisure));
+    const building = ovData.elements.find(e => e.tags && e.tags.building);
+    const target   = lot || building;
+
+    if (!target || !target.geometry || target.geometry.length < 3) {
+      setLookupState('notfound'); return;
+    }
+
+    const sqft = Math.round(polygonAreaSqft(target.geometry, lat));
+    if (sqft < 100) { setLookupState('notfound'); return; }
+
+    /* Pre-fill input */
+    document.getElementById('sqft-input').value = sqft;
+    updateQuote();
+
+    const source = lot ? 'OpenStreetMap lot boundary' : 'OpenStreetMap building footprint';
+    setLookupState('found', sqft, source);
+
+  } catch (err) {
+    setLookupState('error');
+  }
+}
+
+/* Shoelace formula: lat/lng polygon → square feet */
+function polygonAreaSqft(nodes, latRef) {
+  const M_LAT = 111320;                                    // metres per degree latitude
+  const M_LON = 111320 * Math.cos(latRef * Math.PI / 180); // metres per degree longitude
+  let area = 0;
+  const n = nodes.length;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    area += (nodes[j].lon * M_LON + nodes[i].lon * M_LON) *
+            (nodes[j].lat * M_LAT - nodes[i].lat * M_LAT);
+  }
+  return Math.abs(area / 2) * 10.764; // m² → ft²
+}
+
+/* Toggle which lookup banner is visible */
+function setLookupState(status, arg1, arg2) {
+  ['lookup-loading', 'lookup-found', 'lookup-notfound', 'lookup-error']
+    .forEach(id => document.getElementById(id).classList.remove('show'));
+
+  if (status === 'loading') {
+    document.getElementById('lookup-addr').textContent = arg1;
+    document.getElementById('lookup-loading').classList.add('show');
+  } else if (status === 'found') {
+    document.getElementById('lookup-sqft').textContent   = Number(arg1).toLocaleString();
+    document.getElementById('lookup-source').textContent = arg2;
+    document.getElementById('lookup-found').classList.add('show');
+  } else if (status === 'notfound') {
+    document.getElementById('lookup-notfound').classList.add('show');
+  } else if (status === 'error') {
+    document.getElementById('lookup-error').classList.add('show');
+  }
 }
 
 /* ══════════════════════════════════════
@@ -472,7 +568,7 @@ function fmt(n) {
 }
 
 function updateQuote() {
-  const sqft = parseInt(document.getElementById('sqft-input').value, 10);
+  const sqft    = parseInt(document.getElementById('sqft-input').value, 10);
   const preview = document.getElementById('quote-preview');
 
   if (!state.plan || !sqft || sqft < 100) {
@@ -490,7 +586,8 @@ function updateQuote() {
   document.getElementById('qp-plan-name').textContent    = PLANS[state.plan].label + ' Plan';
   document.getElementById('qp-amount').textContent       = fmt(total);
   document.getElementById('qp-breakdown').innerHTML      =
-    '<strong>' + sqft.toLocaleString() + ' sqft</strong> &times; <strong>$' + rate.toFixed(2) + '/sqft</strong> — ' + tierLabel(sqft);
+    '<strong>' + sqft.toLocaleString() + ' sqft</strong> &times; ' +
+    '<strong>$' + rate.toFixed(2) + '/sqft</strong> — ' + tierLabel(sqft);
   document.getElementById('qp-sqft-display').textContent = sqft.toLocaleString() + ' sqft';
   document.getElementById('qp-rate-display').textContent = '$' + rate.toFixed(2) + '/sqft';
 
@@ -511,23 +608,14 @@ function validateStep(step) {
 
   if (step === 2) {
     let ok = true;
-    const fields = [
-      ['addr-street', 'err-street'],
-      ['addr-city',   'err-city'],
-      ['addr-state',  'err-state'],
-      ['addr-zip',    'err-zip']
-    ];
-    fields.forEach(([id, errId]) => {
-      const el = document.getElementById(id);
+    [['addr-street','err-street'],['addr-city','err-city'],
+     ['addr-state','err-state'],['addr-zip','err-zip']].forEach(([id, errId]) => {
+      const el  = document.getElementById(id);
       const err = document.getElementById(errId);
-      if (!el.value.trim()) {
-        el.classList.add('error');
-        err.classList.add('show');
-        ok = false;
-      } else {
-        el.classList.remove('error');
-        err.classList.remove('show');
-      }
+      const bad = !el.value.trim();
+      el.classList.toggle('error', bad);
+      err.classList.toggle('show', bad);
+      if (bad) ok = false;
     });
     document.getElementById('step2-error').classList.toggle('show', !ok);
     if (ok) {
@@ -547,7 +635,6 @@ function validateStep(step) {
       return false;
     }
     document.getElementById('step3-error').classList.remove('show');
-    // refresh in case plan was changed earlier
     updateQuote();
     return true;
   }
@@ -559,15 +646,14 @@ function validateStep(step) {
    STEP NAVIGATION
 ══════════════════════════════════════ */
 function goStep(next) {
-  // validate current before advancing
   if (next > currentStep && !validateStep(currentStep)) return;
-
-  // populate review when arriving at step 4
   if (next === 4) populateReview();
+
+  /* Auto-trigger lookup when entering step 3 */
+  if (next === 3 && state.street) lookupPropertySize();
 
   document.getElementById('step-' + currentStep).classList.remove('active');
   document.getElementById('step-' + next).classList.add('active');
-
   updateStepper(next);
   currentStep = next;
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -578,19 +664,10 @@ function updateStepper(active) {
     const ind    = document.getElementById('step-ind-' + i);
     const circle = document.getElementById('step-circle-' + i);
     ind.classList.remove('active', 'done');
-    if (i < active) {
-      ind.classList.add('done');
-      circle.innerHTML = '&#10003;';  // checkmark
-    } else if (i === active) {
-      ind.classList.add('active');
-      circle.textContent = i;
-    } else {
-      circle.textContent = i;
-    }
-    if (i <= 3) {
-      document.getElementById('step-line-' + i)
-        .classList.toggle('done', i < active);
-    }
+    if (i < active)      { ind.classList.add('done');   circle.innerHTML  = '&#10003;'; }
+    else if (i === active){ ind.classList.add('active'); circle.textContent = i; }
+    else                  { circle.textContent = i; }
+    if (i <= 3) document.getElementById('step-line-' + i).classList.toggle('done', i < active);
   }
 }
 
@@ -610,17 +687,13 @@ function populateReview() {
    SUBMIT
 ══════════════════════════════════════ */
 function submitOrder() {
-  // Fake order number
   const orderNum = 'NPL-' + Math.floor(10000 + Math.random() * 90000);
-
-  // Populate confirmation
   document.getElementById('confirm-order-num').textContent = 'Order #' + orderNum;
-  document.getElementById('cf-plan').textContent           = PLANS[state.plan].label;
-  document.getElementById('cf-address').textContent        = state.street + ', ' + state.city + ', ' + state.st + ' ' + state.zip;
-  document.getElementById('cf-sqft').textContent           = state.sqft.toLocaleString() + ' sqft';
-  document.getElementById('cf-total').textContent          = fmt(state.total) + '/month';
+  document.getElementById('cf-plan').textContent     = PLANS[state.plan].label;
+  document.getElementById('cf-address').textContent  = state.street + ', ' + state.city + ', ' + state.st + ' ' + state.zip;
+  document.getElementById('cf-sqft').textContent     = state.sqft.toLocaleString() + ' sqft';
+  document.getElementById('cf-total').textContent    = fmt(state.total) + '/month';
 
-  // Jump to confirmation — bypass normal nav
   document.getElementById('step-4').classList.remove('active');
   document.getElementById('step-5').classList.add('active');
   document.querySelector('.order-stepper').style.display = 'none';
@@ -631,8 +704,7 @@ function submitOrder() {
    URL PARAM: pre-select plan
 ══════════════════════════════════════ */
 (function preSelect() {
-  const params = new URLSearchParams(window.location.search);
-  const plan   = params.get('plan');
+  const plan = new URLSearchParams(window.location.search).get('plan');
   if (plan && PLANS[plan]) {
     const card = document.querySelector('.plan-card[data-plan="' + plan + '"]');
     if (card) selectPlan(card);
