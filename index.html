@@ -744,9 +744,42 @@
       font-size: 0.78rem; color: var(--muted);
     }
 
+    /* ── Admin tabs ── */
+    #admin-view .admin-tabs {
+      display: flex; gap: 4px; margin-bottom: 24px;
+      background: #eef3f0; border-radius: 10px; padding: 4px; width: fit-content;
+    }
+    #admin-view .admin-tab {
+      padding: 8px 20px; border: none; border-radius: 7px; cursor: pointer;
+      font-family: inherit; font-size: 0.84rem; font-weight: 700;
+      color: var(--muted); background: transparent;
+      transition: background 0.18s, color 0.18s;
+      display: flex; align-items: center; gap: 7px;
+    }
+    #admin-view .admin-tab.active { background: #fff; color: var(--green); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    #admin-view .admin-tab .tab-count {
+      background: #e6f4ec; color: var(--green-mid);
+      font-size: 0.68rem; font-weight: 800;
+      padding: 1px 7px; border-radius: 99px;
+    }
+    #admin-view .admin-tab.active .tab-count { background: var(--green); color: #fff; }
+
+    /* ── Plan badge ── */
+    #admin-view .plan-chip {
+      display: inline-block; padding: 2px 10px; border-radius: 99px;
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.3px;
+    }
+    #admin-view .plan-chip.basic    { background: #e8f5ee; color: #2d6a4f; }
+    #admin-view .plan-chip.standard { background: #d8f3dc; color: #1b4332; }
+    #admin-view .plan-chip.premium  { background: #fff6e0; color: #7a5f00; }
+
+    /* ── Amount column ── */
+    #admin-view td.amount-col { font-weight: 700; color: var(--green); font-variant-numeric: tabular-nums; }
+    #admin-view td.order-col  { font-weight: 700; color: var(--dark); font-family: monospace; font-size: 0.82rem; }
+
     @media (max-width: 768px) {
       #admin-view .admin-main { padding: 20px 16px; }
-      #admin-view #leadSearch { width: 100%; }
+      #admin-view #leadSearch, #admin-view #orderSearch { width: 100%; }
       #admin-view .table-wrap { overflow-x: auto; }
     }
   </style>
@@ -1016,41 +1049,85 @@
   <div class="admin-main">
     <div class="admin-header">
       <div>
-        <h1 class="admin-title">Quote Leads</h1>
-        <p class="admin-sub">All quote requests submitted through the website.</p>
+        <h1 class="admin-title">Dashboard</h1>
+        <p class="admin-sub">Quote leads and submitted orders from your website.</p>
       </div>
     </div>
 
-    <div class="admin-stats">
-      <div class="stat-card"><div class="sc-label">Total Leads</div><div class="sc-val" id="statTotal">0</div></div>
-      <div class="stat-card"><div class="sc-label">This Month</div><div class="sc-val" id="statMonth">0</div></div>
-      <div class="stat-card"><div class="sc-label">States</div><div class="sc-val" id="statStates">0</div></div>
+    <!-- Tabs -->
+    <div class="admin-tabs">
+      <button class="admin-tab active" id="tabLeads" onclick="switchTab('leads')">
+        <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;stroke-width:2;fill:none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Quote Leads
+        <span class="tab-count" id="tabLeadsCount">0</span>
+      </button>
+      <button class="admin-tab" id="tabOrders" onclick="switchTab('orders')">
+        <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;stroke-width:2;fill:none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Orders
+        <span class="tab-count" id="tabOrdersCount">0</span>
+      </button>
     </div>
 
-    <div class="table-wrap">
-      <div class="table-toolbar">
-        <div class="table-search-wrap">
-          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="leadSearch" placeholder="Search leads…" />
+    <!-- ── LEADS PANEL ── -->
+    <div id="panelLeads">
+      <div class="admin-stats">
+        <div class="stat-card"><div class="sc-label">Total Leads</div><div class="sc-val" id="statTotal">0</div></div>
+        <div class="stat-card"><div class="sc-label">This Month</div><div class="sc-val" id="statMonth">0</div></div>
+        <div class="stat-card"><div class="sc-label">States</div><div class="sc-val" id="statStates">0</div></div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <div class="table-search-wrap">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="leadSearch" placeholder="Search leads…" />
+          </div>
+          <div class="table-actions">
+            <button class="btn-export" id="btnExport">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export CSV
+            </button>
+            <button class="btn-refresh" id="btnRefresh">
+              <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Refresh
+            </button>
+          </div>
         </div>
-        <div class="table-actions">
-          <button class="btn-export" id="btnExport">
-            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Export CSV
-          </button>
-          <button class="btn-refresh" id="btnRefresh">
-            <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            Refresh
-          </button>
-        </div>
+        <div id="leadsTableContainer"></div>
+        <div class="table-footer" id="tableFooter"></div>
       </div>
-
-      <div id="leadsTableContainer">
-        <!-- rendered by JS -->
-      </div>
-
-      <div class="table-footer" id="tableFooter"></div>
     </div>
+
+    <!-- ── ORDERS PANEL ── -->
+    <div id="panelOrders" style="display:none">
+      <div class="admin-stats">
+        <div class="stat-card"><div class="sc-label">Total Orders</div><div class="sc-val" id="oStatTotal">0</div></div>
+        <div class="stat-card"><div class="sc-label">This Month</div><div class="sc-val" id="oStatMonth">0</div></div>
+        <div class="stat-card"><div class="sc-label">Monthly Revenue</div><div class="sc-val" id="oStatMRR">$0</div></div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <div class="table-search-wrap">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="orderSearch" placeholder="Search orders…" />
+          </div>
+          <div class="table-actions">
+            <button class="btn-export" id="btnExportOrders">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export CSV
+            </button>
+            <button class="btn-refresh" id="btnRefreshOrders">
+              <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+        <div id="ordersTableContainer"></div>
+        <div class="table-footer" id="ordersTableFooter"></div>
+      </div>
+    </div>
+
   </div>
 
 </div><!-- /#admin-view -->
@@ -1285,9 +1362,12 @@
   }
 
   function renderAdminView() {
-    adminLeads = getLeads();
+    adminLeads  = getLeads();
+    adminOrders = getOrders();
     updateStats();
     renderTable();
+    document.getElementById('tabLeadsCount').textContent  = adminLeads.length;
+    document.getElementById('tabOrdersCount').textContent = adminOrders.length;
   }
 
   function updateStats() {
@@ -1387,6 +1467,156 @@
   document.getElementById('btnRefresh').addEventListener('click', () => { adminLeads = getLeads(); updateStats(); renderTable(); });
   document.getElementById('btnExport').addEventListener('click', exportCSV);
   document.getElementById('leadSearch').addEventListener('input', function () { searchQ = this.value; renderTable(); });
+
+  /* ══════════════════════════════════════
+     ORDERS TABLE
+  ══════════════════════════════════════ */
+  const DB_KEY_ORDERS = 'nplawn_orders';
+
+  let adminOrders  = [];
+  let oSortCol     = 'timestamp';
+  let oSortDir     = 'desc';
+  let oSearchQ     = '';
+
+  function getOrders() {
+    return JSON.parse(localStorage.getItem(DB_KEY_ORDERS) || '[]');
+  }
+
+  function filteredOrders() {
+    const q = oSearchQ.toLowerCase();
+    return adminOrders
+      .filter(o => !q || [o.orderNum, o.plan, o.street, o.city, o.st, o.zip].join(' ').toLowerCase().includes(q))
+      .sort((a, b) => {
+        let va = a[oSortCol] ?? '', vb = b[oSortCol] ?? '';
+        if (va < vb) return oSortDir === 'asc' ? -1 : 1;
+        if (va > vb) return oSortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+  }
+
+  function updateOrderStats() {
+    document.getElementById('oStatTotal').textContent = adminOrders.length;
+    const now = new Date();
+    const monthCount = adminOrders.filter(o => {
+      const d = new Date(o.timestamp);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }).length;
+    document.getElementById('oStatMonth').textContent = monthCount;
+    const mrr = adminOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+    document.getElementById('oStatMRR').textContent = mrr.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+    document.getElementById('tabOrdersCount').textContent = adminOrders.length;
+  }
+
+  function planChip(plan) {
+    const cls = (plan || '').toLowerCase();
+    return `<span class="plan-chip ${cls}">${escHtml(plan)}</span>`;
+  }
+
+  function renderOrdersTable() {
+    const orders    = filteredOrders();
+    const container = document.getElementById('ordersTableContainer');
+    const footer    = document.getElementById('ordersTableFooter');
+
+    if (orders.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <strong>${oSearchQ ? 'No results found' : 'No orders yet'}</strong>
+          <p>${oSearchQ ? 'Try a different search term.' : 'Orders submitted through the order flow will appear here.'}</p>
+        </div>`;
+      footer.textContent = '';
+      return;
+    }
+
+    const cols = [
+      { key: 'num',       label: '#',            sortable: false },
+      { key: 'timestamp', label: 'Submitted',     sortable: true  },
+      { key: 'orderNum',  label: 'Order #',       sortable: true  },
+      { key: 'plan',      label: 'Plan',          sortable: true  },
+      { key: 'street',    label: 'Address',       sortable: true  },
+      { key: 'city',      label: 'City',          sortable: true  },
+      { key: 'st',        label: 'State',         sortable: true  },
+      { key: 'zip',       label: 'ZIP',           sortable: true  },
+      { key: 'sqft',      label: 'Sqft',          sortable: true  },
+      { key: 'total',     label: 'Monthly Total', sortable: true  },
+      { key: 'notes',     label: 'Notes',         sortable: false },
+    ];
+
+    const thHTML = cols.map(c => {
+      if (!c.sortable) return `<th>${c.label}</th>`;
+      const cls = oSortCol === c.key ? (oSortDir === 'asc' ? 'sorted-asc' : 'sorted-desc') : '';
+      return `<th class="${cls}" data-ocol="${c.key}">${c.label} <span class="sort-icon">↑</span></th>`;
+    }).join('');
+
+    const rowsHTML = orders.map((o, i) => `
+      <tr>
+        <td class="num-col">${i + 1}</td>
+        <td class="date-col">${formatDate(o.timestamp)}</td>
+        <td class="order-col">${escHtml(o.orderNum)}</td>
+        <td>${planChip(o.plan)}</td>
+        <td class="addr-col">${escHtml(o.street)}</td>
+        <td>${escHtml(o.city)}</td>
+        <td><span class="state-chip">${escHtml(o.st)}</span></td>
+        <td>${escHtml(o.zip)}</td>
+        <td class="num-col">${Number(o.sqft || 0).toLocaleString()}</td>
+        <td class="amount-col">${Number(o.total || 0).toLocaleString('en-US',{style:'currency',currency:'USD'})}</td>
+        <td style="color:var(--muted);font-size:0.8rem;max-width:160px;overflow:hidden;text-overflow:ellipsis">${escHtml(o.notes || '—')}</td>
+      </tr>`).join('');
+
+    container.innerHTML = `
+      <table>
+        <thead><tr>${thHTML}</tr></thead>
+        <tbody>${rowsHTML}</tbody>
+      </table>`;
+
+    footer.textContent = `Showing ${orders.length} of ${adminOrders.length} order${adminOrders.length !== 1 ? 's' : ''}`;
+
+    container.querySelectorAll('th[data-ocol]').forEach(th => {
+      th.addEventListener('click', () => {
+        const col = th.dataset.ocol;
+        if (oSortCol === col) oSortDir = oSortDir === 'asc' ? 'desc' : 'asc';
+        else { oSortCol = col; oSortDir = 'asc'; }
+        renderOrdersTable();
+      });
+    });
+  }
+
+  function exportOrdersCSV() {
+    const orders = filteredOrders();
+    if (!orders.length) return;
+    const header = ['#','Submitted','Order #','Plan','Street','City','State','ZIP','Sqft','Monthly Total','Notes'];
+    const rows   = orders.map((o, i) => [
+      i + 1, formatDate(o.timestamp), o.orderNum, o.plan,
+      o.street, o.city, o.st, o.zip, o.sqft,
+      Number(o.total || 0).toFixed(2), o.notes || ''
+    ].map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"'));
+    const csv  = [header, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = Object.assign(document.createElement('a'), { href: url, download: 'nplawn-orders.csv' });
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+  document.getElementById('btnRefreshOrders').addEventListener('click', () => {
+    adminOrders = getOrders(); updateOrderStats(); renderOrdersTable();
+  });
+  document.getElementById('btnExportOrders').addEventListener('click', exportOrdersCSV);
+  document.getElementById('orderSearch').addEventListener('input', function () { oSearchQ = this.value; renderOrdersTable(); });
+
+  /* ══════════════════════════════════════
+     TAB SWITCHER
+  ══════════════════════════════════════ */
+  let activeTab = 'leads';
+
+  function switchTab(tab) {
+    activeTab = tab;
+    document.getElementById('tabLeads').classList.toggle('active',  tab === 'leads');
+    document.getElementById('tabOrders').classList.toggle('active', tab === 'orders');
+    document.getElementById('panelLeads').style.display  = tab === 'leads'  ? 'block' : 'none';
+    document.getElementById('panelOrders').style.display = tab === 'orders' ? 'block' : 'none';
+    if (tab === 'orders') { adminOrders = getOrders(); updateOrderStats(); renderOrdersTable(); }
+  }
+
   document.getElementById('adminLogout').addEventListener('click', () => {
     document.getElementById('admin-view').style.display = 'none';
     document.getElementById('login-view').style.display = 'flex';

@@ -688,6 +688,27 @@ function populateReview() {
 ══════════════════════════════════════ */
 function submitOrder() {
   const orderNum = 'NPL-' + Math.floor(10000 + Math.random() * 90000);
+
+  /* Persist to localStorage so admin can see it */
+  const record = {
+    orderNum,
+    plan:      state.plan,
+    street:    state.street,
+    city:      state.city,
+    st:        state.st,
+    zip:       state.zip,
+    sqft:      state.sqft,
+    rate:      state.rate,
+    total:     state.total,
+    notes:     state.notes || '',
+    timestamp: new Date().toISOString()
+  };
+  try {
+    const existing = JSON.parse(localStorage.getItem('nplawn_orders') || '[]');
+    existing.push(record);
+    localStorage.setItem('nplawn_orders', JSON.stringify(existing));
+  } catch (e) { /* storage full or unavailable — order still shows confirmation */ }
+
   document.getElementById('confirm-order-num').textContent = 'Order #' + orderNum;
   document.getElementById('cf-plan').textContent     = PLANS[state.plan].label;
   document.getElementById('cf-address').textContent  = state.street + ', ' + state.city + ', ' + state.st + ' ' + state.zip;
