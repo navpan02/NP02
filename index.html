@@ -1545,7 +1545,7 @@
       { key: 'st',        label: 'State',         sortable: true  },
       { key: 'zip',       label: 'ZIP',           sortable: true  },
       { key: 'sqft',      label: 'Sqft',          sortable: true  },
-      { key: 'total',     label: 'Monthly Total', sortable: true  },
+      { key: 'total',     label: 'Annual Total',  sortable: true  },
       { key: 'notes',     label: 'Notes',         sortable: false },
     ];
 
@@ -1591,7 +1591,7 @@
   function exportOrdersCSV() {
     const orders = filteredOrders();
     if (!orders.length) return;
-    const header = ['#','Submitted','Order #','Plan','Street','City','State','ZIP','Sqft','Monthly Total','Notes'];
+    const header = ['#','Submitted','Order #','Plan','Street','City','State','ZIP','Sqft','Annual Total','Notes'];
     const rows   = orders.map((o, i) => [
       i + 1, formatDate(o.timestamp), o.orderNum, o.plan,
       o.street, o.city, o.st, o.zip, o.sqft,
