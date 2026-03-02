@@ -245,11 +245,18 @@
             <div class="quote-amount" id="qp-amount">$—</div>
             <div class="quote-period">/ year</div>
           </div>
+          <div class="quote-avg-row" id="qp-avg-row" style="display:none;font-size:0.8rem;color:#5a7a67;margin-top:4px">
+            Avg. <strong id="qp-avg">$—</strong> / application
+          </div>
           <div class="quote-divider"></div>
           <div class="quote-meta">
             <div class="quote-meta-item">
               <strong id="qp-sqft-display">—</strong>
               <span>Square feet</span>
+            </div>
+            <div class="quote-meta-item">
+              <strong id="qp-rounds-display">—</strong>
+              <span>Applications/yr</span>
             </div>
             <div class="quote-meta-item">
               <strong>Annual</strong>
@@ -297,6 +304,10 @@
         <div class="review-row">
           <span class="review-row-label">Property Size</span>
           <span class="review-row-val" id="rv-sqft">—</span>
+        </div>
+        <div class="review-row">
+          <span class="review-row-label">Avg / Application</span>
+          <span class="review-row-val" id="rv-avg">—</span>
         </div>
         <div class="review-row">
           <span class="review-row-label">Access Notes</span>
@@ -358,6 +369,10 @@
           <span id="cf-sqft">—</span>
         </div>
         <div class="confirm-row">
+          <span>Avg / Application</span>
+          <span id="cf-avg">—</span>
+        </div>
+        <div class="confirm-row">
           <span>Annual Price</span>
           <span id="cf-total" style="font-size:1rem;color:#2d6a4f">—</span>
         </div>
@@ -403,6 +418,7 @@ const PLANS = {
   Basic: {
     label: 'GrassBasic',
     desc: 'Essential seasonal care',
+    rounds: 6,
     tiers: [
       { max: 1000,     rate: 0.10 },
       { max: 5000,     rate: 0.09 },
@@ -412,6 +428,7 @@ const PLANS = {
   Standard: {
     label: 'GrassPro',
     desc: 'Complete year-round care',
+    rounds: 7,
     tiers: [
       { max: 1000,     rate: 0.20 },
       { max: 5000,     rate: 0.18 },
@@ -421,6 +438,7 @@ const PLANS = {
   Premium: {
     label: 'GrassNatural',
     desc: '100% organic treatments',
+    rounds: 6,
     tiers: [
       { max: 1000,     rate: 0.30 },
       { max: 5000,     rate: 0.27 },
@@ -612,9 +630,15 @@ function updateQuote() {
   state.rate  = rate;
   state.total = total;
 
+  const rounds    = PLANS[state.plan].rounds;
+  const avgPerApp = total / rounds;
+
   document.getElementById('qp-plan-name').textContent    = PLANS[state.plan].label + ' Plan';
   document.getElementById('qp-amount').textContent       = fmt(total);
+  document.getElementById('qp-avg').textContent          = fmt(avgPerApp);
+  document.getElementById('qp-avg-row').style.display    = 'block';
   document.getElementById('qp-sqft-display').textContent = sqft.toLocaleString() + ' sqft';
+  document.getElementById('qp-rounds-display').textContent = rounds;
 
   preview.classList.add('visible');
 }
@@ -703,6 +727,7 @@ function populateReview() {
   document.getElementById('rv-plan').textContent    = PLANS[state.plan].label + ' — ' + PLANS[state.plan].desc;
   document.getElementById('rv-address').textContent = state.street + ', ' + state.city + ', ' + state.st + ' ' + state.zip;
   document.getElementById('rv-sqft').textContent    = state.sqft.toLocaleString() + ' sqft';
+  document.getElementById('rv-avg').textContent     = fmt(state.total / PLANS[state.plan].rounds) + ' (' + PLANS[state.plan].rounds + ' rounds/yr)';
   document.getElementById('rv-notes').textContent   = state.notes || 'None';
   document.getElementById('rv-total').textContent   = fmt(state.total);
 }
@@ -737,6 +762,7 @@ function submitOrder() {
   document.getElementById('cf-plan').textContent     = PLANS[state.plan].label;
   document.getElementById('cf-address').textContent  = state.street + ', ' + state.city + ', ' + state.st + ' ' + state.zip;
   document.getElementById('cf-sqft').textContent     = state.sqft.toLocaleString() + ' sqft';
+  document.getElementById('cf-avg').textContent      = fmt(state.total / PLANS[state.plan].rounds) + ' / application';
   document.getElementById('cf-total').textContent    = fmt(state.total) + '/year';
 
   document.getElementById('step-4').classList.remove('active');
