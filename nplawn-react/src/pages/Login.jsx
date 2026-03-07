@@ -63,14 +63,18 @@ export default function LoginPage() {
       <div className="w-full max-w-sm mx-4 bg-white rounded-2xl shadow-md overflow-hidden">
 
         {/* Header */}
-        <div className="bg-green-600 px-8 py-7 text-center">
+        <div className="bg-green-700 px-8 py-7 text-center">
           <div className="flex items-center justify-center gap-2 mb-1">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <svg className="w-6 h-6 text-green-200" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 22V12M12 12C12 7 7 3 2 4c0 5 4 9 10 8zM12 12c0-5 5-9 10-8-1 5-5 9-10 8z"/>
             </svg>
-            <span className="text-white text-xl font-bold tracking-wide">NPLawn LLC</span>
+            <span className="text-xl font-bold tracking-wide">
+              <span className="text-green-200">NP</span>
+              <span className="text-white">Lawn</span>
+              <span className="text-green-200"> LLC</span>
+            </span>
           </div>
-          <p className="text-green-100 text-sm">Sign in to your account</p>
+          <p className="text-green-200 text-sm">Sign in to your account</p>
         </div>
 
         {/* Form */}

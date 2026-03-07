@@ -21,10 +21,10 @@ function pwStrength(pw) {
 }
 
 const STRENGTH_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong'];
-const STRENGTH_COLORS = ['', '#ff2d78', '#f5e642', '#74c69d', '#00ff9f'];
+const STRENGTH_COLORS = ['', '#ef4444', '#f59e0b', '#22c55e', '#16a34a'];
 
 export default function SignupPage() {
-  const [step, setStep]         = useState('register'); // 'register' | 'verify'
+  const [step, setStep]         = useState('register');
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
@@ -61,13 +61,11 @@ export default function SignupPage() {
       const hash = await sha256(password);
       const code = generateCode();
 
-      // Save user as unverified
       const users = getRegisteredUsers();
       const newUser = { email: lc, hash, verified: false, verifyCode: code, registeredAt: Date.now() };
       users.push(newUser);
       saveRegisteredUsers(users);
 
-      // Try EmailJS
       let sent = false;
       if (EMAIL_CONFIGURED) {
         try {
@@ -132,112 +130,90 @@ export default function SignupPage() {
     navigate('/login?registered=1');
   };
 
-  const inputStyle = {
-    background: 'rgba(0,255,159,0.05)',
-    border: '1px solid rgba(0,255,159,0.2)',
-    color: '#00ff9f',
-    fontFamily: 'Share Tech Mono, monospace',
-    letterSpacing: '0.5px',
-  };
-
-  const cardStyle = {
-    background: '#0d0018',
-    border: '1px solid rgba(0,255,159,0.35)',
-    borderRadius: '4px',
-    boxShadow: '0 0 0 1px rgba(0,255,159,0.08) inset, 0 0 40px rgba(0,255,159,0.08), 0 32px 64px rgba(0,0,0,0.7)',
-  };
-
-  const bgStyle = {
-    background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,45,120,0.12) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 50% 100%, rgba(0,255,159,0.10) 0%, transparent 60%), #07000f',
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  };
-
   return (
-    <div style={bgStyle} className="font-mono px-4">
-      <div style={{ ...cardStyle, width: '100%', maxWidth: 460 }}>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8">
+      <div className="w-full max-w-sm mx-4 bg-white rounded-2xl shadow-md overflow-hidden">
+
         {/* Header */}
-        <div style={{ borderBottom: '1px solid rgba(0,255,159,0.15)' }} className="px-10 pt-10 pb-7">
-          <div style={{ fontFamily: 'VT323, monospace', fontSize: '1.5rem', color: '#00ff9f', letterSpacing: '2px' }}>
-            NPLAWN LLC
+        <div className="bg-green-700 px-8 py-7 text-center">
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <svg className="w-6 h-6 text-green-200" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 22V12M12 12C12 7 7 3 2 4c0 5 4 9 10 8zM12 12c0-5 5-9 10-8-1 5-5 9-10 8z"/>
+            </svg>
+            <span className="text-xl font-bold tracking-wide">
+              <span className="text-green-200">NP</span>
+              <span className="text-white">Lawn</span>
+              <span className="text-green-200"> LLC</span>
+            </span>
           </div>
-          <div className="text-[10px] tracking-[3px] mt-0.5" style={{ color: 'rgba(0,255,159,0.5)' }}>
-            {step === 'register' ? 'CREATE NEW ACCOUNT' : 'VERIFY YOUR EMAIL'}
-          </div>
+          <p className="text-green-200 text-sm">
+            {step === 'register' ? 'Create your account' : 'Verify your email'}
+          </p>
         </div>
 
-        <div className="px-10 pt-8 pb-8">
+        <div className="px-8 py-7">
           {step === 'register' ? (
             <form onSubmit={handleRegister} className="space-y-4">
-              <CpLabel>IDENTIFIER (EMAIL)</CpLabel>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                required placeholder="you@example.com"
-                className="w-full px-4 py-2.5 text-sm rounded outline-none"
-                style={inputStyle} />
+              <Field label="Email" type="email" value={email}
+                onChange={e => setEmail(e.target.value)} placeholder="you@example.com" />
 
-              <CpLabel>PASSKEY</CpLabel>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                required placeholder="Min. 8 characters"
-                className="w-full px-4 py-2.5 text-sm rounded outline-none"
-                style={inputStyle} />
-
-              {password && (
-                <div>
-                  <div className="flex gap-1 mb-1">
-                    {[1,2,3,4].map(i => (
-                      <div key={i} className="h-1 flex-1 rounded-full transition-all"
-                        style={{ background: strength >= i ? STRENGTH_COLORS[strength] : 'rgba(255,255,255,0.1)' }} />
-                    ))}
+              <div>
+                <Field label="Password" type="password" value={password}
+                  onChange={e => setPassword(e.target.value)} placeholder="Min. 8 characters" />
+                {password && (
+                  <div className="mt-2">
+                    <div className="flex gap-1 mb-1">
+                      {[1,2,3,4].map(i => (
+                        <div key={i} className="h-1 flex-1 rounded-full transition-all"
+                          style={{ background: strength >= i ? STRENGTH_COLORS[strength] : '#e5e7eb' }} />
+                      ))}
+                    </div>
+                    <span className="text-xs font-medium" style={{ color: STRENGTH_COLORS[strength] }}>
+                      {STRENGTH_LABELS[strength]}
+                    </span>
                   </div>
-                  <div className="text-[10px] tracking-wider" style={{ color: STRENGTH_COLORS[strength], fontFamily: 'Share Tech Mono, monospace' }}>
-                    {STRENGTH_LABELS[strength]}
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              <CpLabel>CONFIRM PASSKEY</CpLabel>
-              <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
-                required placeholder="Repeat password"
-                className="w-full px-4 py-2.5 text-sm rounded outline-none"
-                style={inputStyle} />
+              <Field label="Confirm Password" type="password" value={confirm}
+                onChange={e => setConfirm(e.target.value)} placeholder="Repeat password" />
 
               {error && (
-                <div className="text-xs py-2 px-3 rounded text-center"
-                  style={{ background: 'rgba(255,45,120,0.12)', border: '1px solid rgba(255,45,120,0.3)', color: '#ff2d78', fontFamily: 'Share Tech Mono, monospace' }}>
-                  ⚠ {error}
+                <div className="text-sm py-2 px-3 rounded-lg text-center bg-red-50 border border-red-200 text-red-600">
+                  {error}
                 </div>
               )}
 
               <button type="submit" disabled={loading}
-                className="w-full py-3 text-sm font-bold tracking-[2px] uppercase rounded mt-2"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(0,255,159,0.15), rgba(0,255,159,0.05))',
-                  border: '1px solid rgba(0,255,159,0.5)',
-                  color: '#00ff9f',
-                  fontFamily: 'Share Tech Mono, monospace',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                }}>
-                {loading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
+                className="w-full py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white font-semibold rounded-lg transition-colors duration-150 text-sm mt-1"
+                style={{ cursor: loading ? 'not-allowed' : 'pointer' }}>
+                {loading ? 'Creating account...' : 'Create Account'}
               </button>
 
-              <div className="text-xs text-center pt-1" style={{ color: 'rgba(0,255,159,0.4)', fontFamily: 'Share Tech Mono, monospace' }}>
+              <p className="text-center text-sm text-gray-500 mt-1">
                 Already have an account?{' '}
-                <Link to="/login" style={{ color: '#00ff9f' }}>[ LOGIN ]</Link>
-              </div>
+                <Link to="/login" className="text-green-600 hover:text-green-700 font-medium">
+                  Sign in
+                </Link>
+              </p>
+
+              <p className="text-center text-sm text-gray-500">
+                <Link to="/" className="text-green-600 hover:text-green-700 font-medium">
+                  ← Back to Home
+                </Link>
+              </p>
             </form>
           ) : (
             <form onSubmit={handleVerify} className="space-y-5">
-              <p className="text-xs leading-relaxed" style={{ color: 'rgba(0,255,159,0.6)', fontFamily: 'Share Tech Mono, monospace' }}>
-                A 6-digit verification code has been sent to <strong style={{ color: '#00ff9f' }}>{email}</strong>.
+              <p className="text-sm text-gray-600 leading-relaxed">
+                A 6-digit code was sent to <strong className="text-gray-800">{email}</strong>.
                 Enter it below to activate your account.
               </p>
 
               {demoCode && (
-                <div className="text-center py-3 rounded" style={{ background: 'rgba(245,230,66,0.08)', border: '1px solid rgba(245,230,66,0.3)' }}>
-                  <div className="text-[9px] tracking-[2px] mb-1" style={{ color: '#f5e642', fontFamily: 'Share Tech Mono, monospace' }}>DEMO — EMAIL NOT CONFIGURED</div>
-                  <div style={{ fontFamily: 'VT323, monospace', fontSize: '2.5rem', color: '#f5e642', letterSpacing: '8px' }}>{demoCode}</div>
+                <div className="text-center py-3 rounded-lg bg-yellow-50 border border-yellow-200">
+                  <div className="text-xs text-yellow-700 font-medium mb-1">Demo mode — email not configured</div>
+                  <div className="text-3xl font-bold tracking-[0.4em] text-yellow-700">{demoCode}</div>
                 </div>
               )}
 
@@ -247,51 +223,61 @@ export default function SignupPage() {
                     ref={el => otpRefs.current[i] = el}
                     onChange={e => handleOtpChange(i, e.target.value)}
                     onKeyDown={e => handleOtpKeyDown(i, e)}
-                    className="w-11 h-14 text-center text-xl rounded outline-none"
-                    style={{ ...inputStyle, letterSpacing: '0', fontFamily: 'VT323, monospace', fontSize: '2rem' }} />
+                    className="w-11 h-14 text-center text-2xl font-bold rounded-lg border border-gray-300 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all text-gray-800"
+                  />
                 ))}
               </div>
 
               {otpError && (
-                <div className="text-xs py-2 px-3 rounded text-center"
-                  style={{ background: 'rgba(255,45,120,0.12)', border: '1px solid rgba(255,45,120,0.3)', color: '#ff2d78', fontFamily: 'Share Tech Mono, monospace' }}>
-                  ⚠ {otpError}
+                <div className="text-sm py-2 px-3 rounded-lg text-center bg-red-50 border border-red-200 text-red-600">
+                  {otpError}
                 </div>
               )}
 
               <button type="submit"
-                className="w-full py-3 text-sm font-bold tracking-[2px] uppercase rounded"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(0,255,159,0.15), rgba(0,255,159,0.05))',
-                  border: '1px solid rgba(0,255,159,0.5)',
-                  color: '#00ff9f',
-                  fontFamily: 'Share Tech Mono, monospace',
-                  cursor: 'pointer',
-                }}>
-                VERIFY &amp; ACTIVATE
+                className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors duration-150 text-sm"
+                style={{ cursor: 'pointer' }}>
+                Verify &amp; Activate
               </button>
 
-              <div className="text-center text-xs" style={{ color: 'rgba(0,255,159,0.4)', fontFamily: 'Share Tech Mono, monospace' }}>
+              <p className="text-center text-sm text-gray-500">
                 {resendTimer > 0
                   ? `Resend available in ${resendTimer}s`
-                  : <button type="button" onClick={() => { /* resend logic */ startResendTimer(); }}
-                      style={{ color: '#00ff9f', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Share Tech Mono, monospace' }}>
-                      [ RESEND CODE ]
+                  : <button type="button" onClick={startResendTimer}
+                      className="text-green-600 hover:text-green-700 font-medium">
+                      Resend code
                     </button>}
-              </div>
+              </p>
+
+              <p className="text-center text-sm text-gray-500">
+                <Link to="/" className="text-green-600 hover:text-green-700 font-medium">
+                  ← Back to Home
+                </Link>
+              </p>
             </form>
           )}
         </div>
+
+        <div className="text-center text-xs text-gray-300 pb-4">© 2026 NPLawn LLC</div>
       </div>
     </div>
   );
 }
 
-function CpLabel({ children }) {
+function Field({ label, type, value, onChange, placeholder }) {
   return (
-    <label className="block text-[10px] tracking-[2px]"
-      style={{ color: 'rgba(0,255,159,0.5)', fontFamily: 'Share Tech Mono, monospace' }}>
-      {children}
-    </label>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        required
+        className="w-full px-4 py-2.5 text-sm rounded-lg border border-gray-300 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
+      />
+    </div>
   );
 }
