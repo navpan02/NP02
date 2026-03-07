@@ -27,7 +27,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-np-dark/96 backdrop-blur-md px-[5%] flex items-center justify-between h-16 shadow-[0_2px_12px_rgba(0,0,0,0.25)]">
+    <nav className="sticky top-0 z-50 bg-np-dark backdrop-blur-md px-[5%] flex items-center justify-between h-16 shadow-[0_2px_12px_rgba(0,0,0,0.25)]">
       {/* Brand */}
       <Link to="/" className="flex items-center gap-2.5 no-underline">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-np-lite to-np-accent flex items-center justify-center">
