@@ -288,11 +288,16 @@ export default function BuyNow() {
       const { error } = await supabase.from('orders').insert(orderData);
       if (error) {
         console.error('Supabase insert error:', error);
-        setDbError(`DB error: ${error.message} (code: ${error.code})`);
+        // Save locally so order isn't lost, then surface the error on this screen
+        const orders = JSON.parse(localStorage.getItem('nplawn_orders') || '[]');
+        orders.push(orderData);
+        localStorage.setItem('nplawn_orders', JSON.stringify(orders));
+        setDbError(`${error.message} (code: ${error.code})`);
+        return; // stay on step 3 so user sees the error
       }
     }
 
-    // Always keep a local copy as fallback
+    // Success — save locally and proceed
     const orders = JSON.parse(localStorage.getItem('nplawn_orders') || '[]');
     orders.push(orderData);
     localStorage.setItem('nplawn_orders', JSON.stringify(orders));
@@ -692,18 +697,20 @@ export default function BuyNow() {
             </div>
 
             {dbError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-4 font-mono">
-                {dbError}
+              <div className="bg-red-50 border-2 border-red-400 text-red-800 rounded-xl px-5 py-4 mb-6">
+                <div className="font-bold text-sm mb-1">Supabase Error — order NOT saved to database:</div>
+                <div className="font-mono text-xs break-all bg-red-100 rounded p-2 mb-3">{dbError}</div>
+                <p className="text-xs text-red-700">Fix the error above (e.g. create the table in Supabase), then click <strong>Retry</strong>. Your order is saved locally in the meantime.</p>
               </div>
             )}
             <div className="flex justify-between">
               <button onClick={() => setStep(2)} className="btn-outline px-6 py-2.5">← Back</button>
               <button
                 disabled={!name.trim()}
-                onClick={placeOrder}
+                onClick={() => { setDbError(''); placeOrder(); }}
                 className="btn-primary px-10 py-4 text-base font-extrabold disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_6px_20px_rgba(82,183,136,0.38)]"
               >
-                Place Order →
+                {dbError ? 'Retry →' : 'Place Order →'}
               </button>
             </div>
           </div>

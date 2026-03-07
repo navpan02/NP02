@@ -225,8 +225,8 @@ describe('BuyNow – Order Submission', () => {
     expect(screen.getAllByText(/NPL-/i).length).toBeGreaterThan(0);
   });
 
-  it('shows a DB error message if supabase insert fails', async () => {
-    mockInsert.mockResolvedValueOnce({ error: { message: 'table not found', code: '42P01' } });
+  it('shows DB error on step 3 and stays on that page when insert fails', async () => {
+    mockInsert.mockResolvedValueOnce({ error: { message: 'relation "orders" does not exist', code: '42P01' } });
     const user = userEvent.setup();
     renderBuyNow();
     await completeStep0(user);
@@ -234,9 +234,11 @@ describe('BuyNow – Order Submission', () => {
     await advanceFromPlanStep();
     await user.type(screen.getByPlaceholderText(/Jane Smith/i), 'John Doe');
     fireEvent.click(screen.getByRole('button', { name: /place order/i }));
-    // Order still completes (confirmation shown) even on DB error
-    await screen.findByText(/thank you/i);
-    // And it was saved to localStorage despite DB error
+    // Error should appear on step 3 — NOT the confirmation screen
+    await screen.findByText(/supabase error/i);
+    expect(screen.getByText(/42P01/)).toBeInTheDocument();
+    expect(screen.queryByText(/thank you/i)).not.toBeInTheDocument();
+    // Order saved locally as fallback
     const saved = JSON.parse(localStorage.getItem('nplawn_orders') || '[]');
     expect(saved.length).toBe(1);
   });
