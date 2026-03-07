@@ -198,22 +198,30 @@ export default function AdminDashboard() {
         {/* LEADS TAB */}
         {tab === 'leads' && (
           <div>
-            <h2 className="text-np-dark font-bold text-xl mb-4">Contact Form Leads</h2>
+            <h2 className="text-np-dark font-bold text-xl mb-4">Leads</h2>
             {leads.length === 0 ? (
-              <EmptyState message="No leads yet. Contact form submissions will appear here." />
+              <EmptyState message="No leads yet. Quote requests and contact form submissions will appear here." />
             ) : (
               <div className="space-y-4">
                 {leads.map((l, i) => (
                   <div key={i} className="bg-white rounded-2xl border border-np-border p-5">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <div className="font-bold text-np-dark">{l.name}</div>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-bold text-np-dark">{l.name}</span>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            l.source === 'get_quote'
+                              ? 'bg-np-accent/20 text-np-dark'
+                              : 'bg-np-surface text-np-muted border border-np-border'}`}>
+                            {l.source === 'get_quote' ? 'Quote Request' : 'Contact Form'}
+                          </span>
+                        </div>
                         <div className="text-np-muted text-sm">{l.email} · {l.phone}</div>
                       </div>
                       <div className="text-np-muted text-xs">{new Date(l.submitted_at || l.submittedAt).toLocaleDateString()}</div>
                     </div>
                     {l.service && <div className="text-xs font-semibold text-np-accent uppercase tracking-wide mb-2">{l.service}</div>}
-                    <p className="text-np-text text-sm leading-relaxed">{l.message}</p>
+                    <p className="text-np-text text-sm leading-relaxed whitespace-pre-line">{l.message}</p>
                   </div>
                 ))}
               </div>

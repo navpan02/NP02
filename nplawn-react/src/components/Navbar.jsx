@@ -127,7 +127,7 @@ export default function Navbar() {
             Login
           </Link>
         )}
-        <Link to="/order" className="btn-primary text-sm px-4 py-2 hidden md:inline-block">
+        <Link to="/quote" className="btn-primary text-sm px-4 py-2 hidden md:inline-block">
           Get a Quote
         </Link>
         {/* Mobile hamburger */}
@@ -177,7 +177,7 @@ export default function Navbar() {
               My Orders
             </Link>
           )}
-          <Link to="/order" onClick={() => setOpen(false)} className="btn-primary text-center mt-2">
+          <Link to="/quote" onClick={() => setOpen(false)} className="btn-primary text-center mt-2">
             Get a Quote
           </Link>
         </div>

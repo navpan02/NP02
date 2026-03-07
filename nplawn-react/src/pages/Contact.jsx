@@ -32,6 +32,7 @@ export default function Contact() {
       phone:        lead.phone,
       service:      lead.service,
       message:      lead.message,
+      source:       'contact_form',
       submitted_at: lead.submitted_at,
     }]);
     if (error) console.error('Supabase lead insert error:', error.message);
