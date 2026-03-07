@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 const PLANS = {
   Basic: {
@@ -263,19 +264,35 @@ export default function BuyNow() {
     setShowDropdown(false);
   }
 
-  function placeOrder() {
+  async function placeOrder() {
     const id = 'NPL-' + Date.now().toString().slice(-6);
-    setOrderId(id);
     const p = PLANS[selectedPlan];
     const total = calcTotal(selectedPlan, Number(sqft));
+    const orderData = {
+      id,
+      plan: p.label,
+      sqft: Number(sqft),
+      total,
+      avg_per_app: Math.round(total / p.rounds),
+      rounds: p.rounds,
+      customer_name: name,
+      customer_email: email || null,
+      customer_phone: phone || null,
+      customer_address: addressInput,
+    };
+
+    // Save to Supabase if configured
+    if (supabase) {
+      const { error } = await supabase.from('orders').insert(orderData);
+      if (error) console.error('Supabase insert error:', error.message);
+    }
+
+    // Always keep a local copy as fallback
     const orders = JSON.parse(localStorage.getItem('nplawn_orders') || '[]');
-    orders.push({
-      id, plan: p.label, sqft: Number(sqft), total,
-      avgPerApp: Math.round(total / p.rounds), rounds: p.rounds,
-      customer: { name, email, phone, address: addressInput },
-      submittedAt: Date.now(),
-    });
+    orders.push({ ...orderData, submittedAt: Date.now() });
     localStorage.setItem('nplawn_orders', JSON.stringify(orders));
+
+    setOrderId(id);
     setOrdered(true);
   }
 
