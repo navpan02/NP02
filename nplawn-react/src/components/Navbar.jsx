@@ -1,23 +1,87 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const NAV_LINKS = [
-  { to: '/',                label: 'Home' },
-  { to: '/lawn-care',       label: 'Lawn Care' },
-  { to: '/mowing',          label: 'Mowing' },
-  { to: '/tree-trimming',   label: 'Tree Trimming' },
-  { to: '/tree-shrubs',     label: 'Tree & Shrubs' },
-  { to: '/aeration-seeding',label: 'Aeration' },
-  { to: '/landscape-design',label: 'Design' },
-  { to: '/grass-guide',     label: 'Grass Guide' },
-  { to: '/blog',            label: 'Blog' },
-  { to: '/faq',             label: 'FAQ' },
-  { to: '/about',           label: 'About' },
+const NAV_GROUPS = [
+  {
+    label: 'Lawn Care',
+    links: [
+      { to: '/lawn-care',       label: 'Lawn Care' },
+      { to: '/tree-trimming',   label: 'Tree Trimming' },
+      { to: '/tree-shrubs',     label: 'Tree & Shrubs' },
+      { to: '/landscape-design',label: 'Landscape Design' },
+    ],
+  },
+  {
+    label: 'Lawn Maintenance',
+    links: [
+      { to: '/mowing',          label: 'Mowing' },
+      { to: '/aeration-seeding',label: 'Aeration & Seeding' },
+    ],
+  },
+  {
+    label: 'Learn',
+    links: [
+      { to: '/grass-guide',     label: 'Grass Guide' },
+      { to: '/blog',            label: 'Blog' },
+      { to: '/faq',             label: 'FAQ' },
+    ],
+  },
+  {
+    label: 'About',
+    links: [
+      { to: '/about',           label: 'About Us' },
+    ],
+  },
 ];
+
+function DropdownGroup({ group }) {
+  const [open, setOpen] = useState(false);
+  const timeout = useRef(null);
+
+  const show = () => { clearTimeout(timeout.current); setOpen(true); };
+  const hide = () => { timeout.current = setTimeout(() => setOpen(false), 120); };
+
+  const isGroupActive = group.links.some(l =>
+    window.location.pathname === l.to || window.location.pathname.startsWith(l.to + '/')
+  );
+
+  return (
+    <div className="relative" onMouseEnter={show} onMouseLeave={hide}>
+      <button
+        className={`text-sm font-medium transition-colors flex items-center gap-1 ${
+          isGroupActive ? 'text-np-lite' : 'text-white/80 hover:text-np-lite'
+        }`}
+      >
+        {group.label}
+        <svg className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-np-dark border border-white/10 rounded-xl shadow-xl py-1 min-w-[160px] z-50">
+          {group.links.map(l => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              onMouseEnter={show}
+              className={({ isActive }) =>
+                `block px-4 py-2 text-sm transition-colors ${isActive ? 'text-np-lite' : 'text-white/80 hover:text-np-lite'}`
+              }
+            >
+              {l.label}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [expandedGroup, setExpandedGroup] = useState(null);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -40,18 +104,10 @@ export default function Navbar() {
         </span>
       </Link>
 
-      {/* Desktop links */}
+      {/* Desktop grouped nav */}
       <div className="hidden lg:flex items-center gap-6">
-        {NAV_LINKS.map(l => (
-          <NavLink
-            key={l.to}
-            to={l.to}
-            className={({ isActive }) =>
-              `text-sm font-medium transition-colors ${isActive ? 'text-np-lite' : 'text-white/80 hover:text-np-lite'}`
-            }
-          >
-            {l.label}
-          </NavLink>
+        {NAV_GROUPS.map(group => (
+          <DropdownGroup key={group.label} group={group} />
         ))}
       </div>
 
@@ -86,18 +142,35 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {open && (
-        <div className="absolute top-16 left-0 right-0 bg-np-dark border-t border-white/10 p-4 flex flex-col gap-3 lg:hidden">
-          {NAV_LINKS.map(l => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              onClick={() => setOpen(false)}
-              className={({ isActive }) =>
-                `text-sm font-medium py-1 transition-colors ${isActive ? 'text-np-lite' : 'text-white/80 hover:text-np-lite'}`
-              }
-            >
-              {l.label}
-            </NavLink>
+        <div className="absolute top-16 left-0 right-0 bg-np-dark border-t border-white/10 p-4 flex flex-col gap-1 lg:hidden">
+          {NAV_GROUPS.map(group => (
+            <div key={group.label}>
+              <button
+                onClick={() => setExpandedGroup(expandedGroup === group.label ? null : group.label)}
+                className="w-full flex items-center justify-between py-2 text-sm font-semibold text-white/50 uppercase tracking-widest text-xs"
+              >
+                {group.label}
+                <svg className={`w-3 h-3 transition-transform ${expandedGroup === group.label ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {expandedGroup === group.label && (
+                <div className="flex flex-col gap-1 pl-3 border-l border-white/10 mb-2">
+                  {group.links.map(l => (
+                    <NavLink
+                      key={l.to}
+                      to={l.to}
+                      onClick={() => setOpen(false)}
+                      className={({ isActive }) =>
+                        `text-sm font-medium py-1.5 transition-colors ${isActive ? 'text-np-lite' : 'text-white/80 hover:text-np-lite'}`
+                      }
+                    >
+                      {l.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
           {user && (
             <Link to="/account" onClick={() => setOpen(false)} className="text-sm font-medium py-1 text-np-lite hover:text-white transition-colors">
