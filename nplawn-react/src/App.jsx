@@ -23,6 +23,8 @@ import QuoteEstimator   from './pages/QuoteEstimator';
 import GetQuote         from './pages/GetQuote';
 import QuoteThanks      from './pages/QuoteThanks';
 import GrassGuide       from './pages/GrassGuide';
+import HowItWorks      from './pages/HowItWorks';
+import ProviderLanding  from './pages/ProviderLanding';
 
 // Service pages — NPLawn core
 import Mowing           from './pages/services/Mowing';
@@ -61,8 +63,11 @@ import TreeTrimmingSigns        from './pages/blog/TreeTrimmingSigns';
 import LowMaintenanceLandscape  from './pages/blog/LowMaintenanceLandscape';
 import OneThirdRule             from './pages/blog/OneThirdRule';
 import MidwestShrubs            from './pages/blog/MidwestShrubs';
-import WinterPrepGuide          from './pages/blog/WinterPrepGuide';
-import BestGrassTypes           from './pages/blog/BestGrassTypes';
+import WinterPrepGuide              from './pages/blog/WinterPrepGuide';
+import BestGrassTypes               from './pages/blog/BestGrassTypes';
+import MentalBenefitsGreenLawn      from './pages/blog/MentalBenefitsGreenLawn';
+import FamilyOutdoorSpace           from './pages/blog/FamilyOutdoorSpace';
+import CleanLawnMarketplaceGuide    from './pages/blog/CleanLawnMarketplaceGuide';
 
 function AppRoutes() {
   return (
@@ -74,6 +79,8 @@ function AppRoutes() {
       <Route path="/blog"               element={<Layout><Blog/></Layout>} />
       <Route path="/faq"                element={<Layout><FAQ/></Layout>} />
       <Route path="/grass-guide"        element={<Layout><GrassGuide/></Layout>} />
+      <Route path="/how-it-works"       element={<Layout><HowItWorks/></Layout>} />
+      <Route path="/providers"          element={<Layout><ProviderLanding/></Layout>} />
       <Route path="/quote-estimator"    element={<Layout><QuoteEstimator/></Layout>} />
       <Route path="/account"            element={<Layout><Account/></Layout>} />
       <Route path="/tree-trimming"      element={<Layout><TreeTrimming/></Layout>} />
@@ -115,8 +122,11 @@ function AppRoutes() {
       <Route path="/blog/low-maintenance-landscape" element={<Layout><LowMaintenanceLandscape/></Layout>} />
       <Route path="/blog/one-third-rule"            element={<Layout><OneThirdRule/></Layout>} />
       <Route path="/blog/midwest-shrubs"            element={<Layout><MidwestShrubs/></Layout>} />
-      <Route path="/blog/winter-prep-guide"         element={<Layout><WinterPrepGuide/></Layout>} />
-      <Route path="/blog/best-grass-types"          element={<Layout><BestGrassTypes/></Layout>} />
+      <Route path="/blog/winter-prep-guide"             element={<Layout><WinterPrepGuide/></Layout>} />
+      <Route path="/blog/best-grass-types"              element={<Layout><BestGrassTypes/></Layout>} />
+      <Route path="/blog/mental-benefits-green-lawn"    element={<Layout><MentalBenefitsGreenLawn/></Layout>} />
+      <Route path="/blog/family-outdoor-space"          element={<Layout><FamilyOutdoorSpace/></Layout>} />
+      <Route path="/blog/cleanlawn-marketplace-guide"   element={<Layout><CleanLawnMarketplaceGuide/></Layout>} />
 
       {/* Quote lead form */}
       <Route path="/quote"       element={<Layout><GetQuote/></Layout>} />

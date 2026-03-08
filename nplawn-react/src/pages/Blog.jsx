@@ -82,6 +82,33 @@ export const BLOG_POSTS = [
     readTime: '5 min read',
     icon: <><circle cx="12" cy="8" r="5"/><path d="M12 13v9M9 22h6"/></>,
   },
+  {
+    slug: 'mental-benefits-green-lawn',
+    tag: 'Wellness',
+    title: 'The Science-Backed Mental Health Benefits of a Beautiful Lawn',
+    excerpt: 'Research shows that green outdoor spaces reduce cortisol, improve mood, and boost focus. Here\'s what the science says about your lawn\'s impact on your mental well-being — and how to make the most of it.',
+    date: 'March 8, 2026',
+    readTime: '6 min read',
+    icon: <><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></>,
+  },
+  {
+    slug: 'family-outdoor-space',
+    tag: 'Family Life',
+    title: 'Why Your Backyard Is Your Family\'s Most Underused Asset',
+    excerpt: 'A well-maintained lawn isn\'t just curb appeal — it\'s where memories are made. From summer cookouts to kids\' first cartwheels, here\'s how to turn your yard into the family gathering spot it was always meant to be.',
+    date: 'March 8, 2026',
+    readTime: '5 min read',
+    icon: <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
+  },
+  {
+    slug: 'cleanlawn-marketplace-guide',
+    tag: 'CleanLawn',
+    title: 'How the CleanLawn Marketplace Works: A Complete Guide for Homeowners',
+    excerpt: 'What is CleanLawn, who are the providers, and how do you get the best results from on-demand lawn services? Everything you need to know before your first booking.',
+    date: 'March 8, 2026',
+    readTime: '7 min read',
+    icon: <><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></>,
+  },
 ];
 
 export default function Blog() {
