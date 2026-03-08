@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { validateName, validateEmail, validatePhone } from '../utils/validate';
 
 // Map LawnCare plan keys → BuyNow plan keys
 const PLAN_KEY_MAP = { basic: 'Basic', pro: 'Standard', natural: 'Premium' };
@@ -136,6 +137,7 @@ export default function BuyNow() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [step1Error, setStep1Error] = useState('');
+  const [fieldErrors0, setFieldErrors0] = useState({ phone: '', email: '' });
 
   // Step 1
   const [sqft, setSqft] = useState('');
@@ -150,6 +152,7 @@ export default function BuyNow() {
 
   // Step 3 / Confirm
   const [name, setName] = useState('');
+  const [nameError, setNameError] = useState('');
   const [ordered, setOrdered] = useState(false);
   const [orderId, setOrderId] = useState('');
   const [dbError, setDbError] = useState('');
@@ -256,8 +259,11 @@ export default function BuyNow() {
   }
 
   function handleStep1Continue() {
+    const errs = { phone: validatePhone(phone), email: validateEmail(email) };
+    setFieldErrors0(errs);
     if (!selectedPlace) { setStep1Error('Please select an address from the suggestions.'); return; }
     if (!phone.trim() && !email.trim()) { setStep1Error('Please provide at least a phone number or email address.'); return; }
+    if (errs.phone || errs.email) return;
     setStep1Error('');
     setStep(1);
     estimateLawn(parseFloat(selectedPlace.lat), parseFloat(selectedPlace.lon));
@@ -271,6 +277,8 @@ export default function BuyNow() {
   }
 
   async function placeOrder() {
+    const err = validateName(name);
+    if (err) { setNameError(err); return; }
     const id = 'NPL-' + Date.now().toString().slice(-6);
     const p = PLANS[selectedPlan];
     const total = calcTotal(selectedPlan, Number(sqft));
@@ -466,12 +474,14 @@ export default function BuyNow() {
                 <span className="text-np-muted font-normal ml-1">(required if no email)</span>
               </label>
               <input
-                className="form-input"
+                className={`form-input ${fieldErrors0.phone ? 'border-red-400 focus:border-red-400 focus:ring-red-100' : ''}`}
                 type="tel"
                 value={phone}
-                onChange={e => setPhone(e.target.value)}
+                onChange={e => { setPhone(e.target.value); setFieldErrors0(p => ({ ...p, phone: '' })); }}
+                onBlur={e => setFieldErrors0(p => ({ ...p, phone: validatePhone(e.target.value) }))}
                 placeholder="(630) 555-0100"
               />
+              {fieldErrors0.phone && <p className="mt-1 text-xs text-red-600">{fieldErrors0.phone}</p>}
             </div>
 
             {/* Email */}
@@ -481,12 +491,14 @@ export default function BuyNow() {
                 <span className="text-np-muted font-normal ml-1">(required if no phone)</span>
               </label>
               <input
-                className="form-input"
+                className={`form-input ${fieldErrors0.email ? 'border-red-400 focus:border-red-400 focus:ring-red-100' : ''}`}
                 type="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={e => { setEmail(e.target.value); setFieldErrors0(p => ({ ...p, email: '' })); }}
+                onBlur={e => setFieldErrors0(p => ({ ...p, email: validateEmail(e.target.value) }))}
                 placeholder="you@example.com"
               />
+              {fieldErrors0.email && <p className="mt-1 text-xs text-red-600">{fieldErrors0.email}</p>}
             </div>
 
             {step1Error && (
@@ -651,12 +663,16 @@ export default function BuyNow() {
             <div className="form-group mb-6">
               <label className="form-label">Your Full Name *</label>
               <input
-                className="form-input"
+                className={`form-input ${nameError ? 'border-red-400 focus:border-red-400 focus:ring-red-100' : ''}`}
                 type="text"
                 value={name}
-                onChange={e => setName(e.target.value)}
+                onChange={e => { setName(e.target.value); setNameError(''); }}
+                onBlur={e => setNameError(validateName(e.target.value))}
                 placeholder="Jane Smith"
+                maxLength={50}
               />
+              {nameError && <p className="mt-1 text-xs text-red-600">{nameError}</p>}
+              <p className="mt-1 text-xs text-np-muted text-right">{name.length}/50</p>
             </div>
 
             {/* Order summary card */}
@@ -711,9 +727,8 @@ export default function BuyNow() {
             <div className="flex justify-between">
               <button onClick={() => setStep(2)} className="btn-outline px-6 py-2.5">← Back</button>
               <button
-                disabled={!name.trim()}
                 onClick={() => { setDbError(''); placeOrder(); }}
-                className="btn-primary px-10 py-4 text-base font-extrabold disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_6px_20px_rgba(82,183,136,0.38)]"
+                className="btn-primary px-10 py-4 text-base font-extrabold shadow-[0_6px_20px_rgba(82,183,136,0.38)]"
               >
                 {dbError ? 'Retry →' : 'Place Order →'}
               </button>

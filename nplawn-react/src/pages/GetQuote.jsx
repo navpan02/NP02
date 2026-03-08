@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { validateName, validateEmail, validatePhone } from '../utils/validate';
 
 const SERVICES = [
   'Lawn Care Plan (GrassBasic)',
@@ -19,13 +20,21 @@ export default function GetQuote() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', service: '', notes: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({ name: '', email: '', phone: '' });
 
-  const set = (k, v) => { setError(''); setForm(f => ({ ...f, [k]: v })); };
+  const set = (k, v) => { setError(''); setFieldErrors(e => ({ ...e, [k]: '' })); setForm(f => ({ ...f, [k]: v })); };
+  const blurField = (k, v) => {
+    const validators = { name: validateName, email: validateEmail, phone: validatePhone };
+    if (validators[k]) setFieldErrors(e => ({ ...e, [k]: validators[k](v) }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim() || (!form.email.trim() && !form.phone.trim())) {
-      setError('Please provide your name and at least an email or phone number.');
+    const errs = { name: validateName(form.name), email: validateEmail(form.email), phone: validatePhone(form.phone) };
+    setFieldErrors(errs);
+    if (errs.name || errs.email || errs.phone) return;
+    if (!form.email.trim() && !form.phone.trim()) {
+      setError('Please provide at least an email or phone number.');
       return;
     }
     setLoading(true);
@@ -68,20 +77,27 @@ export default function GetQuote() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="form-group">
               <label className="form-label">Full Name *</label>
-              <input className="form-input" type="text" required value={form.name}
-                onChange={e => set('name', e.target.value)} placeholder="Jane Smith" />
+              <input className={`form-input ${fieldErrors.name ? 'border-red-400' : ''}`} type="text" value={form.name}
+                onChange={e => set('name', e.target.value)} onBlur={e => blurField('name', e.target.value)}
+                placeholder="Jane Smith" maxLength={50} />
+              {fieldErrors.name && <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p>}
+              <p className="mt-1 text-xs text-np-muted text-right">{form.name.length}/50</p>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-5">
               <div className="form-group">
                 <label className="form-label">Email</label>
-                <input className="form-input" type="email" value={form.email}
-                  onChange={e => set('email', e.target.value)} placeholder="jane@example.com" />
+                <input className={`form-input ${fieldErrors.email ? 'border-red-400' : ''}`} type="email" value={form.email}
+                  onChange={e => set('email', e.target.value)} onBlur={e => blurField('email', e.target.value)}
+                  placeholder="jane@example.com" />
+                {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
               </div>
               <div className="form-group">
                 <label className="form-label">Phone</label>
-                <input className="form-input" type="tel" value={form.phone}
-                  onChange={e => set('phone', e.target.value)} placeholder="(630) 555-0100" />
+                <input className={`form-input ${fieldErrors.phone ? 'border-red-400' : ''}`} type="tel" value={form.phone}
+                  onChange={e => set('phone', e.target.value)} onBlur={e => blurField('phone', e.target.value)}
+                  placeholder="(630) 555-0100" />
+                {fieldErrors.phone && <p className="mt-1 text-xs text-red-600">{fieldErrors.phone}</p>}
               </div>
             </div>
 

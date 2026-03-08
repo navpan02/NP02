@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { validateName, validateEmail, validatePhone } from '../utils/validate';
 
 const PLANS = {
   Basic: {
@@ -66,6 +67,7 @@ export default function Order() {
   const [plan, setPlan]         = useState('Standard');
   const [sqft, setSqft]         = useState('');
   const [form, setForm]         = useState({ name: '', email: '', phone: '', address: '', city: '', zip: '', notes: '' });
+  const [fieldErrors, setFieldErrors] = useState({ name: '', email: '', phone: '' });
   const [orderId, setOrderId]   = useState('');
   const { user }                = useAuth();
 
@@ -79,7 +81,16 @@ export default function Order() {
   const avgPerApp = total && PLANS[plan].rounds ? Math.round(total / PLANS[plan].rounds) : 0;
   const planObj  = PLANS[plan];
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setFieldErrors(e => ({ ...e, [k]: '' })); };
+  const blurField = (k, v) => {
+    const validators = { name: validateName, email: validateEmail, phone: validatePhone };
+    if (validators[k]) setFieldErrors(e => ({ ...e, [k]: validators[k](v) }));
+  };
+  const validateStep1 = () => {
+    const errs = { name: validateName(form.name), email: validateEmail(form.email), phone: validatePhone(form.phone) };
+    setFieldErrors(errs);
+    return !errs.name && !errs.email && !errs.phone;
+  };
 
   const submitOrder = async () => {
     const id = 'NPL-' + Date.now().toString().slice(-6);
@@ -193,15 +204,25 @@ export default function Order() {
             <div className="grid md:grid-cols-2 gap-6 max-w-2xl">
               <div className="form-group">
                 <label className="form-label">Full Name *</label>
-                <input className="form-input" type="text" required value={form.name} onChange={e => set('name', e.target.value)} placeholder="Jane Smith" />
+                <input className={`form-input ${fieldErrors.name ? 'border-red-400' : ''}`} type="text" value={form.name}
+                  onChange={e => set('name', e.target.value)} onBlur={e => blurField('name', e.target.value)}
+                  placeholder="Jane Smith" maxLength={50} />
+                {fieldErrors.name && <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p>}
+                <p className="mt-1 text-xs text-np-muted text-right">{form.name.length}/50</p>
               </div>
               <div className="form-group">
                 <label className="form-label">Email *</label>
-                <input className="form-input" type="email" required value={form.email} onChange={e => set('email', e.target.value)} placeholder="jane@example.com" />
+                <input className={`form-input ${fieldErrors.email ? 'border-red-400' : ''}`} type="email" value={form.email}
+                  onChange={e => set('email', e.target.value)} onBlur={e => blurField('email', e.target.value)}
+                  placeholder="jane@example.com" />
+                {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
               </div>
               <div className="form-group">
                 <label className="form-label">Phone *</label>
-                <input className="form-input" type="tel" required value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="(630) 555-0100" />
+                <input className={`form-input ${fieldErrors.phone ? 'border-red-400' : ''}`} type="tel" value={form.phone}
+                  onChange={e => set('phone', e.target.value)} onBlur={e => blurField('phone', e.target.value)}
+                  placeholder="(630) 555-0100" />
+                {fieldErrors.phone && <p className="mt-1 text-xs text-red-600">{fieldErrors.phone}</p>}
               </div>
               <div className="form-group">
                 <label className="form-label">Street Address *</label>
@@ -223,8 +244,8 @@ export default function Order() {
             <div className="flex justify-between mt-8 max-w-2xl">
               <button onClick={() => setStep(0)} className="btn-outline px-6 py-2.5">← Back</button>
               <button
-                disabled={!form.name || !form.email || !form.phone || !form.address || !form.city || !form.zip}
-                onClick={() => setStep(2)}
+                disabled={!form.address || !form.city || !form.zip}
+                onClick={() => { if (validateStep1()) setStep(2); }}
                 className="btn-primary px-8 py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed">
                 Review Order →
               </button>
