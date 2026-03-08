@@ -160,10 +160,9 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 
 /* ═══════════════════════════════════════════════════════════════ */
 export default function ProviderDashboard() {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState('overview');
-
   const email = user?.email || '';
 
   // data state
@@ -204,11 +203,12 @@ export default function ProviderDashboard() {
   const [blockDate, setBlockDate] = useState('');
 
   useEffect(() => {
+    if (loading) return;                          // wait for session restore
     if (!user) { navigate('/login'); return; }
     if (user.role !== 'provider' && user.role !== 'admin') { navigate('/'); return; }
     seedDemoData(email);
     reload();
-  }, [email]);
+  }, [loading, email]);
 
   function reload() {
     const p = getProfile(email);
