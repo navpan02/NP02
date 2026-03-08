@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const GROUPS = [
   {
@@ -77,9 +78,22 @@ function NavGroup({ group }) {
   );
 }
 
+const HOMEOWNER_LINKS = [
+  { to: '/CleanLawn/homeowner',               label: 'Dashboard' },
+  { to: '/CleanLawn/homeowner/quote-request', label: 'Request Quote' },
+  { to: '/CleanLawn/homeowner/quotes',        label: 'My Quotes' },
+  { to: '/CleanLawn/homeowner/jobs',          label: 'My Jobs' },
+  { to: '/CleanLawn/homeowner/schedule',      label: 'Recurring Plans' },
+  { to: '/CleanLawn/homeowner/messages',      label: 'Messages' },
+  { to: '/CleanLawn/homeowner/properties',    label: 'Properties' },
+];
+
 export default function CleanLawnNav() {
   const location = useLocation();
+  const { user } = useAuth();
   if (!location.pathname.startsWith('/CleanLawn')) return null;
+
+  const isHomeowner = location.pathname.startsWith('/CleanLawn/homeowner');
 
   return (
     <div className="bg-white border-b border-np-border shadow-sm">
@@ -102,9 +116,38 @@ export default function CleanLawnNav() {
 
         <span className="text-np-border text-lg select-none flex-shrink-0">|</span>
 
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {GROUPS.map(g => <NavGroup key={g.label} group={g} />)}
-        </div>
+        {isHomeowner ? (
+          /* Homeowner portal sub-nav */
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {HOMEOWNER_LINKS.map(l => (
+              <NavLink key={l.to} to={l.to} end={l.to === '/CleanLawn/homeowner'}
+                className={({ isActive }) =>
+                  `text-sm font-medium px-3 py-2 rounded-lg transition-colors whitespace-nowrap ${
+                    isActive ? 'text-np-accent bg-np-surface font-semibold' : 'text-np-dark/70 hover:text-np-dark hover:bg-np-surface'
+                  }`
+                }>
+                {l.label}
+              </NavLink>
+            ))}
+          </div>
+        ) : (
+          /* Service category nav */
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {GROUPS.map(g => <NavGroup key={g.label} group={g} />)}
+            {user && (
+              <Link to="/CleanLawn/homeowner"
+                className="ml-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap">
+                My Portal
+              </Link>
+            )}
+            {!user && (
+              <Link to="/login"
+                className="ml-2 px-3 py-1.5 border border-green-600 text-green-700 text-xs font-semibold rounded-lg hover:bg-green-50 transition-colors whitespace-nowrap">
+                Homeowner Login
+              </Link>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

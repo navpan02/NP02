@@ -157,6 +157,51 @@ export default function CleanLawn() {
         </div>
       </section>
 
+      {/* HOMEOWNER FEATURES */}
+      <section className="bg-np-surface px-[8%] py-20">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="pg-label">Homeowner Portal</p>
+            <h2 className="pg-title">Everything You Need to Manage Your Lawn Care</h2>
+            <p className="text-np-muted max-w-xl mx-auto">
+              Create a free account to unlock the full CleanLawn homeowner experience — from quote requests to recurring schedules to real-time messaging.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
+            {[
+              { icon: '📋', title: 'Quote Requests', desc: 'Get competitive bids from multiple local providers in minutes. Describe your project, upload photos, and compare offers.' },
+              { icon: '🔍', title: 'Discover Providers', desc: 'Browse top-rated professionals by service type, location, and reviews. Filter by availability and specialty.' },
+              { icon: '🗓️', title: 'Job Management', desc: 'Track upcoming, in-progress, and completed jobs all in one place. Cancel or reschedule with a click.' },
+              { icon: '🔁', title: 'Recurring Scheduling', desc: 'Set up weekly, biweekly, or monthly service plans. Pause, resume, or cancel at any time.' },
+              { icon: '✉️', title: 'In-app Messaging', desc: 'Chat directly with your provider before and after service. All messages are saved for your records.' },
+              { icon: '⭐', title: 'Reviews & Ratings', desc: 'Leave honest reviews and see before/after photos. Your feedback helps the best pros rise to the top.' },
+              { icon: '🏡', title: 'Property Profiles', desc: 'Save multiple properties with lot size, terrain notes, and access instructions for faster quoting.' },
+              { icon: '👤', title: 'Account & Profile', desc: 'Manage your name, phone, email, and password. Sign up with email or use Google/Facebook login.' },
+              { icon: '🔔', title: 'Notifications', desc: 'Get notified when a new quote arrives, your job is confirmed, or your provider is on the way.' },
+            ].map(f => (
+              <div key={f.title} className="bg-white rounded-xl border border-np-border p-5 shadow-sm">
+                <div className="text-3xl mb-3">{f.icon}</div>
+                <h3 className="font-bold text-np-dark mb-1.5">{f.title}</h3>
+                <p className="text-np-muted text-sm leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="text-center">
+            {user ? (
+              <Link to="/CleanLawn/homeowner"
+                className="btn-primary text-base px-8 py-3.5 inline-block">
+                Go to My Portal
+              </Link>
+            ) : (
+              <div className="flex gap-3 justify-center flex-wrap">
+                <Link to="/signup" className="btn-primary text-base px-8 py-3.5">Create Free Account</Link>
+                <Link to="/login" className="btn-outline text-base px-8 py-3.5">Sign In</Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* CTA STRIP */}
       <section className="cta-section">
         <h2>Ready for a Cleaner, Healthier Lawn?</h2>

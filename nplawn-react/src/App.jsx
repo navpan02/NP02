@@ -31,6 +31,17 @@ import AerationSeeding  from './pages/services/AerationSeeding';
 import LandscapeDesign  from './pages/services/LandscapeDesign';
 import LawnCare         from './pages/services/LawnCare';
 
+// CleanLawn homeowner portal pages
+import HomeownerDashboard  from './pages/cleanlawn/homeowner/Dashboard';
+import HomeownerProfile    from './pages/cleanlawn/homeowner/Profile';
+import HomeownerProperties from './pages/cleanlawn/homeowner/Properties';
+import Discover            from './pages/cleanlawn/homeowner/Discover';
+import QuoteRequest        from './pages/cleanlawn/homeowner/QuoteRequest';
+import Quotes              from './pages/cleanlawn/homeowner/Quotes';
+import Jobs                from './pages/cleanlawn/homeowner/Jobs';
+import Schedule            from './pages/cleanlawn/homeowner/Schedule';
+import Messages            from './pages/cleanlawn/homeowner/Messages';
+
 // CleanLawn service pages
 import HedgeTrimming    from './pages/cleanlawn/HedgeTrimming';
 import LeafRemoval      from './pages/cleanlawn/LeafRemoval';
@@ -118,6 +129,17 @@ function AppRoutes() {
       <Route path="/login"            element={<Login/>} />
       <Route path="/signup"           element={<Signup/>} />
       <Route path="/admin"            element={<AdminDashboard/>} />
+
+      {/* Homeowner portal — under /CleanLawn/homeowner */}
+      <Route path="/CleanLawn/homeowner"                  element={<Layout><HomeownerDashboard/></Layout>} />
+      <Route path="/CleanLawn/homeowner/profile"          element={<Layout><HomeownerProfile/></Layout>} />
+      <Route path="/CleanLawn/homeowner/properties"       element={<Layout><HomeownerProperties/></Layout>} />
+      <Route path="/CleanLawn/homeowner/discover"         element={<Layout><Discover/></Layout>} />
+      <Route path="/CleanLawn/homeowner/quote-request"    element={<Layout><QuoteRequest/></Layout>} />
+      <Route path="/CleanLawn/homeowner/quotes"           element={<Layout><Quotes/></Layout>} />
+      <Route path="/CleanLawn/homeowner/jobs"             element={<Layout><Jobs/></Layout>} />
+      <Route path="/CleanLawn/homeowner/schedule"         element={<Layout><Schedule/></Layout>} />
+      <Route path="/CleanLawn/homeowner/messages"         element={<Layout><Messages/></Layout>} />
 
       {/* Provider portal — full screen, now under /CleanLawn */}
       <Route path="/CleanLawn/provider"         element={<ProviderDashboard/>} />
