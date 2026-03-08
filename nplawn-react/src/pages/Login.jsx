@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { findUser } from '../utils/auth';
+import { signInUser, authErrorMessage } from '../utils/auth';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
@@ -21,26 +21,20 @@ export default function LoginPage() {
   }, [params]);
 
   // Redirect already-logged-in users to their role's home
-  if (user?.role === 'admin')    { navigate('/admin');    return null; }
-  if (user?.role === 'provider') { navigate('/provider'); return null; }
-  if (user)                      { navigate('/');         return null; }
+  if (user?.role === 'admin')    { navigate('/admin');             return null; }
+  if (user?.role === 'provider') { navigate('/CleanLawn/provider'); return null; }
+  if (user)                      { navigate('/');                   return null; }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    try {
-      const found = await findUser(email, password);
-      if (!found) {
-        setError('Invalid email or password.');
-      } else if (found.error === 'unverified') {
-        setError('Please verify your email before logging in.');
-      } else {
-        login(found);
-        navigate(found.role === 'admin' ? '/admin' : found.role === 'provider' ? '/provider' : '/');
-      }
-    } catch {
-      setError('Something went wrong. Please try again.');
+    const { data, error } = await signInUser({ email, password });
+    if (error) {
+      setError(authErrorMessage(error));
+    } else {
+      const role = data.user?.user_metadata?.role ?? 'user';
+      navigate(role === 'admin' ? '/admin' : role === 'provider' ? '/CleanLawn/provider' : '/');
     }
     setLoading(false);
   };
@@ -105,7 +99,7 @@ export default function LoginPage() {
 
           <div className="mt-4 pt-4 border-t border-gray-100 text-center">
             <p className="text-xs text-gray-400 mb-1.5">Are you a lawn care professional?</p>
-            <Link to="/provider/signup"
+            <Link to="/CleanLawn/provider/signup"
               className="inline-block text-sm font-semibold text-np-green hover:text-np-mid transition-colors">
               Register as a Provider →
             </Link>

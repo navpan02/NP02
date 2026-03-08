@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { sha256, getRegisteredUsers, saveRegisteredUsers, RESERVED_EMAILS } from '../../utils/auth';
+import { signUpUser, authErrorMessage } from '../../utils/auth';
 import { supabase } from '../../lib/supabase';
 
 const SERVICES = [
@@ -75,22 +75,13 @@ export default function ProviderSignup() {
   const handleAccountSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const lc = email.toLowerCase().trim();
-    if (RESERVED_EMAILS.includes(lc)) { setError('Email already in use.'); return; }
-    const existing = getRegisteredUsers();
-    if (existing.find(u => u.email === lc)) { setError('Account already exists.'); return; }
     if (password !== confirm) { setError('Passwords do not match.'); return; }
-    if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (password.length < 8)  { setError('Password must be at least 8 characters.'); return; }
     setLoading(true);
-    try {
-      const hash = await sha256(password);
-      const users = getRegisteredUsers();
-      users.push({ email: lc, hash, verified: true, role: 'provider', registeredAt: Date.now() });
-      saveRegisteredUsers(users);
-      setStep(2);
-    } finally {
-      setLoading(false);
-    }
+    const { error: err } = await signUpUser({ email, password, role: 'provider' });
+    setLoading(false);
+    if (err) { setError(authErrorMessage(err)); return; }
+    setStep(2);
   };
 
   const handleBizSubmit = async (e) => {

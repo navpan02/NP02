@@ -1,30 +1,32 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { getSession, saveSession, clearSession } from '../utils/auth';
+import { supabase } from '../lib/supabase';
+import { sessionToUser } from '../utils/auth';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const session = getSession();
-    if (session) setUser(session);
-    setLoading(false);
+    // Hydrate from existing session on first load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(sessionToUser(session));
+      setLoading(false);
+    });
+
+    // Keep state in sync with Supabase auth events (sign-in, sign-out, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => setUser(sessionToUser(session))
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = (userData) => {
-    saveSession(userData);
-    setUser(userData);
-  };
-
-  const logout = () => {
-    clearSession();
-    setUser(null);
-  };
+  const logout = () => supabase.auth.signOut();
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
