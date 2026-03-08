@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { sha256, getRegisteredUsers, saveRegisteredUsers, RESERVED_EMAILS } from '../../utils/auth';
+import { supabase } from '../../lib/supabase';
 
 const SERVICES = [
   'Lawn Mowing', 'Tree Trimming', 'Tree & Shrub Care', 'Aeration & Seeding',
@@ -21,10 +22,22 @@ function pwStrength(pw) {
 const STR_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong'];
 const STR_COLORS = ['', '#ef4444', '#f59e0b', '#22c55e', '#16a34a'];
 
-function saveProviderProfile(profile) {
-  const profiles = JSON.parse(localStorage.getItem('nplawn_provider_profiles') || '{}');
-  profiles[profile.email] = profile;
-  localStorage.setItem('nplawn_provider_profiles', JSON.stringify(profiles));
+async function saveProviderProfile(profile) {
+  await supabase.from('provider_profiles').upsert({
+    email:             profile.email,
+    business_name:     profile.businessName,
+    description:       profile.description,
+    phone:             profile.phone,
+    address:           profile.address,
+    years_in_business: profile.yearsInBusiness ? parseInt(profile.yearsInBusiness) : null,
+    team_size:         profile.teamSize ? parseInt(profile.teamSize) : null,
+    equipment:         profile.equipment,
+    license_number:    profile.licenseNumber,
+    services_offered:  profile.servicesOffered || [],
+    service_areas:     profile.serviceAreas || [],
+    portfolio:         [],
+    total_jobs:        0,
+  });
 }
 
 export default function ProviderSignup() {
@@ -80,31 +93,33 @@ export default function ProviderSignup() {
     }
   };
 
-  const handleBizSubmit = (e) => {
+  const handleBizSubmit = async (e) => {
     e.preventDefault();
     setBizError('');
     if (!bizName.trim()) { setBizError('Business name is required.'); return; }
     if (selectedServices.length === 0) { setBizError('Select at least one service.'); return; }
     if (selectedZips.length === 0) { setBizError('Select at least one service area.'); return; }
-
-    saveProviderProfile({
-      email: email.toLowerCase().trim(),
-      businessName: bizName.trim(),
-      description: bizDesc.trim(),
-      phone: phone.trim(),
-      address: address.trim(),
-      yearsInBusiness: yearsInBiz ? parseInt(yearsInBiz) : null,
-      teamSize: teamSize ? parseInt(teamSize) : null,
-      equipment: equipment.trim(),
-      licenseNumber: licenseNum.trim(),
-      servicesOffered: selectedServices,
-      serviceAreas: selectedZips,
-      portfolio: [],
-      rating: null,
-      totalJobs: 0,
-      createdAt: Date.now(),
-    });
-    setStep(3);
+    setLoading(true);
+    try {
+      await saveProviderProfile({
+        email: email.toLowerCase().trim(),
+        businessName: bizName.trim(),
+        description: bizDesc.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        yearsInBusiness: yearsInBiz,
+        teamSize: teamSize,
+        equipment: equipment.trim(),
+        licenseNumber: licenseNum.trim(),
+        servicesOffered: selectedServices,
+        serviceAreas: selectedZips,
+      });
+      setStep(3);
+    } catch {
+      setBizError('Failed to save profile. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
