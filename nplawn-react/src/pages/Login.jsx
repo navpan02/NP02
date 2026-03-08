@@ -20,11 +20,10 @@ export default function LoginPage() {
     }
   }, [params]);
 
-  // If already logged in as admin, redirect to admin page
-  if (user?.role === 'admin') { navigate('/admin'); return null; }
-
-  // If logged in as regular user, redirect
-  if (user) { navigate('/'); return null; }
+  // Redirect already-logged-in users to their role's home
+  if (user?.role === 'admin')    { navigate('/admin');    return null; }
+  if (user?.role === 'provider') { navigate('/provider'); return null; }
+  if (user)                      { navigate('/');         return null; }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,7 +37,7 @@ export default function LoginPage() {
         setError('Please verify your email before logging in.');
       } else {
         login(found);
-        navigate(found.role === 'admin' ? '/admin' : '/');
+        navigate(found.role === 'admin' ? '/admin' : found.role === 'provider' ? '/provider' : '/');
       }
     } catch {
       setError('Something went wrong. Please try again.');
@@ -104,7 +103,15 @@ export default function LoginPage() {
             </Link>
           </p>
 
-          <p className="text-center text-sm text-gray-500 mt-2">
+          <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+            <p className="text-xs text-gray-400 mb-1.5">Are you a lawn care professional?</p>
+            <Link to="/provider/signup"
+              className="inline-block text-sm font-semibold text-np-green hover:text-np-mid transition-colors">
+              Register as a Provider →
+            </Link>
+          </div>
+
+          <p className="text-center text-sm text-gray-500 mt-4">
             <Link to="/" className="text-green-600 hover:text-green-700 font-medium">
               ← Back to Home
             </Link>

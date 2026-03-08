@@ -60,6 +60,16 @@ export default function Footer() {
             ))}
           </ul>
         </div>
+
+        {/* For Professionals */}
+        <div>
+          <h4 className="footer-heading">For Professionals</h4>
+          <ul className="footer-links">
+            <li><Link to="/provider/signup">Join as a Provider</Link></li>
+            <li><Link to="/login">Provider Login</Link></li>
+            <li><Link to="/provider">Provider Portal</Link></li>
+          </ul>
+        </div>
       </div>
 
       <div className="footer-bottom">
