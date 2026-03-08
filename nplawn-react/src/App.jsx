@@ -23,13 +23,24 @@ import GetQuote         from './pages/GetQuote';
 import QuoteThanks      from './pages/QuoteThanks';
 import GrassGuide       from './pages/GrassGuide';
 
-// Service pages
+// Service pages — NPLawn core
 import Mowing           from './pages/services/Mowing';
 import TreeTrimming     from './pages/services/TreeTrimming';
 import TreeShrubs       from './pages/services/TreeShrubs';
 import AerationSeeding  from './pages/services/AerationSeeding';
 import LandscapeDesign  from './pages/services/LandscapeDesign';
 import LawnCare         from './pages/services/LawnCare';
+
+// CleanLawn service pages
+import HedgeTrimming    from './pages/cleanlawn/HedgeTrimming';
+import LeafRemoval      from './pages/cleanlawn/LeafRemoval';
+import SodInstallation  from './pages/cleanlawn/SodInstallation';
+import Mulching         from './pages/cleanlawn/Mulching';
+import BrushClearing    from './pages/cleanlawn/BrushClearing';
+import StumpGrinding    from './pages/cleanlawn/StumpGrinding';
+import SnowRemoval      from './pages/cleanlawn/SnowRemoval';
+import IrrigationSystem from './pages/cleanlawn/IrrigationSystem';
+import LandscapingDesign from './pages/cleanlawn/LandscapingDesign';
 
 // Blog posts
 import AerateGuide              from './pages/blog/AerateGuide';
@@ -58,10 +69,26 @@ function AppRoutes() {
       <Route path="/landscape-design"   element={<Layout><LandscapeDesign/></Layout>} />
       <Route path="/lawn-care"          element={<Layout><LawnCare/></Layout>} />
 
-      {/* CleanLawn marketplace — home + lawn maintenance services + provider */}
-      <Route path="/CleanLawn"                    element={<Layout><CleanLawn/></Layout>} />
-      <Route path="/CleanLawn/mowing"             element={<Layout><Mowing/></Layout>} />
-      <Route path="/CleanLawn/aeration-seeding"   element={<Layout><AerationSeeding/></Layout>} />
+      {/* CleanLawn marketplace — home */}
+      <Route path="/CleanLawn"                          element={<Layout><CleanLawn/></Layout>} />
+
+      {/* Cuts & Trims */}
+      <Route path="/CleanLawn/mowing"                   element={<Layout><Mowing/></Layout>} />
+      <Route path="/CleanLawn/tree-trimming"            element={<Layout><TreeTrimming/></Layout>} />
+      <Route path="/CleanLawn/hedge-trimming"           element={<Layout><HedgeTrimming/></Layout>} />
+
+      {/* Clean & Enrich */}
+      <Route path="/CleanLawn/aeration-seeding"         element={<Layout><AerationSeeding/></Layout>} />
+      <Route path="/CleanLawn/leaf-removal"             element={<Layout><LeafRemoval/></Layout>} />
+      <Route path="/CleanLawn/sod-installation"         element={<Layout><SodInstallation/></Layout>} />
+      <Route path="/CleanLawn/mulching"                 element={<Layout><Mulching/></Layout>} />
+      <Route path="/CleanLawn/brush-clearing"           element={<Layout><BrushClearing/></Layout>} />
+      <Route path="/CleanLawn/stump-grinding"           element={<Layout><StumpGrinding/></Layout>} />
+      <Route path="/CleanLawn/snow-removal"             element={<Layout><SnowRemoval/></Layout>} />
+
+      {/* Design & Installation */}
+      <Route path="/CleanLawn/irrigation"               element={<Layout><IrrigationSystem/></Layout>} />
+      <Route path="/CleanLawn/landscaping-design"       element={<Layout><LandscapingDesign/></Layout>} />
 
       {/* Redirects from old paths */}
       <Route path="/mowing"             element={<Navigate to="/CleanLawn/mowing" replace />} />

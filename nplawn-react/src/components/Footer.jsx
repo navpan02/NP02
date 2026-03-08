@@ -8,11 +8,17 @@ const SERVICES = [
 ];
 
 const CLEANLAWN = [
-  { to: '/CleanLawn',                  label: 'CleanLawn Home' },
-  { to: '/CleanLawn/mowing',           label: 'Lawn Mowing' },
-  { to: '/CleanLawn/aeration-seeding', label: 'Aeration & Seeding' },
-  { to: '/CleanLawn/provider/signup',  label: 'Join as a Provider' },
-  { to: '/CleanLawn/provider',         label: 'Provider Portal' },
+  { to: '/CleanLawn',                       label: 'CleanLawn Home' },
+  { to: '/CleanLawn/mowing',                label: 'Lawn Mowing' },
+  { to: '/CleanLawn/hedge-trimming',        label: 'Hedge Trimming' },
+  { to: '/CleanLawn/leaf-removal',          label: 'Leaf Removal' },
+  { to: '/CleanLawn/sod-installation',      label: 'Sod Installation' },
+  { to: '/CleanLawn/mulching',              label: 'Mulching' },
+  { to: '/CleanLawn/snow-removal',          label: 'Snow Removal' },
+  { to: '/CleanLawn/irrigation',            label: 'Irrigation Systems' },
+  { to: '/CleanLawn/landscaping-design',    label: 'Landscaping & Design' },
+  { to: '/CleanLawn/provider/signup',       label: 'Join as a Provider' },
+  { to: '/CleanLawn/provider',              label: 'Provider Portal' },
 ];
 
 const COMPANY = [

@@ -15,10 +15,11 @@ const NAV_GROUPS = [
   {
     label: 'CleanLawn',
     links: [
-      { to: '/CleanLawn',                  label: 'CleanLawn Home' },
-      { to: '/CleanLawn/mowing',           label: 'Mowing' },
-      { to: '/CleanLawn/aeration-seeding', label: 'Aeration & Seeding' },
-      { to: '/CleanLawn/provider/signup',  label: 'Join as Provider' },
+      { to: '/CleanLawn',                        label: 'CleanLawn Home' },
+      { to: '/CleanLawn#cuts-trims',             label: 'Cuts & Trims' },
+      { to: '/CleanLawn#clean-enrich',           label: 'Clean & Enrich' },
+      { to: '/CleanLawn#design-installation',    label: 'Design & Installation' },
+      { to: '/CleanLawn/provider/signup',        label: 'Join as Provider' },
     ],
   },
   {

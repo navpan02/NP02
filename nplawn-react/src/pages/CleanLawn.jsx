@@ -1,33 +1,54 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const SERVICES = [
+const CATEGORIES = [
   {
-    to: '/CleanLawn/mowing',
-    title: 'Lawn Mowing',
-    desc: 'Weekly or bi-weekly cuts, edging, and cleanup. Every visit leaves your lawn looking sharp.',
+    id: 'cuts-trims',
+    label: 'Cuts & Trims',
+    tagline: 'Precision cutting services for a sharp, well-kept property.',
     icon: (
       <svg className="w-7 h-7 stroke-np-green fill-none stroke-2" viewBox="0 0 24 24">
-        <path d="M3 17h18M3 12h18M3 7h18"/>
+        <path d="M6 9l6-6 6 6M6 15l6 6 6-6"/>
       </svg>
     ),
+    services: [
+      { to: '/CleanLawn/mowing',         title: 'Lawn Mowing',              desc: 'Weekly or bi-weekly cuts, edging, and cleanup. Every visit leaves your lawn looking sharp.' },
+      { to: '/CleanLawn/tree-trimming',  title: 'Tree Trimming & Pruning',  desc: 'Crown shaping, deadwood removal, and hazard pruning by trained arborists.' },
+      { to: '/CleanLawn/hedge-trimming', title: 'Hedge Trimming',           desc: 'Crisp shapes and clean lines for hedges, topiaries, and formal shrub borders.' },
+    ],
   },
   {
-    to: '/CleanLawn/aeration-seeding',
-    title: 'Aeration & Seeding',
-    desc: 'Core aeration breaks compaction. Overseeding fills in thin areas. Done together, they transform tired lawns.',
+    id: 'clean-enrich',
+    label: 'Clean & Enrich',
+    tagline: 'Clear, restore, and strengthen your outdoor spaces.',
     icon: (
       <svg className="w-7 h-7 stroke-np-green fill-none stroke-2" viewBox="0 0 24 24">
-        <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+        <path d="M12 22V12M12 12C12 7 7 3 2 4c0 5 4 9 10 8zM12 12c0-5 5-9 10-8-1 5-5 9-10 8z"/>
       </svg>
     ),
+    services: [
+      { to: '/CleanLawn/leaf-removal',     title: 'Leaf Removal & Yard Cleanup', desc: 'Complete leaf clearing, gutter cleaning, and seasonal yard cleanup with full haul-away.' },
+      { to: '/CleanLawn/sod-installation', title: 'Sod Installation',             desc: 'Instant lawn from premium, locally grown sod — site-prepped, precisely laid, and ready to walk on.' },
+      { to: '/CleanLawn/mulching',         title: 'Mulching',                     desc: 'Fresh mulch application that suppresses weeds, retains moisture, and defines your beds beautifully.' },
+      { to: '/CleanLawn/brush-clearing',   title: 'Brush Clearing',               desc: 'Overgrowth removal, underbrush cutting, and lot reclamation with full debris disposal.' },
+      { to: '/CleanLawn/stump-grinding',   title: 'Stump Grinding / Removal',     desc: 'Grind stumps below grade and level the area — ready for sod, seed, or new plantings.' },
+      { to: '/CleanLawn/snow-removal',     title: 'Snow Removal',                 desc: 'Seasonal driveway plowing, walkway shoveling, and de-icing — auto-dispatch after every storm.' },
+    ],
   },
-];
-
-const HOW_IT_WORKS = [
-  { n: '1', title: 'Browse Services', desc: 'Pick from our lawn maintenance services. Transparent pricing, no hidden fees.' },
-  { n: '2', title: 'Book Online',     desc: 'Select your preferred schedule and a local provider will confirm within hours.' },
-  { n: '3', title: 'Sit Back',        desc: 'Our vetted professionals show up on time and send a report after every visit.' },
+  {
+    id: 'design-installation',
+    label: 'Design & Installation',
+    tagline: 'Expert design and permanent improvements for your landscape.',
+    icon: (
+      <svg className="w-7 h-7 stroke-np-green fill-none stroke-2" viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="5"/><path d="M12 13v9M9 22h6"/>
+      </svg>
+    ),
+    services: [
+      { to: '/CleanLawn/irrigation',         title: 'Irrigation System Installation & Repair', desc: 'Custom zone design, professional installation, smart controllers, and full repair service.' },
+      { to: '/CleanLawn/landscaping-design', title: 'Landscaping & Garden Design',             desc: 'Custom landscape plans, plant selection and installation, hardscaping, and ongoing care.' },
+    ],
+  },
 ];
 
 export default function CleanLawn() {
@@ -42,64 +63,63 @@ export default function CleanLawn() {
         </div>
         <h1 className="font-black leading-[1.1] tracking-tight max-w-3xl mx-auto"
           style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}>
-          <span className="text-np-lite">CleanLawn</span> — Book Lawn Maintenance, On Demand.
+          <span className="text-np-lite">CleanLawn</span> — Every Service Your Lawn Needs.
         </h1>
         <p className="text-white/70 text-lg max-w-xl mx-auto mt-5">
-          Connect with local, vetted professionals for mowing and aeration. Easy booking, fair prices, great results.
+          From routine mowing to full landscape transformations — browse our services, book online, and let local pros handle the rest.
         </p>
         <div className="flex gap-3.5 flex-wrap justify-center mt-9">
-          <Link to="/CleanLawn/mowing"
+          <a href="#cuts-trims"
             className="bg-np-accent text-np-dark font-extrabold text-base px-8 py-3.5 rounded-full no-underline hover:bg-np-lite transition-all">
-            Book Mowing
-          </Link>
-          <Link to="/CleanLawn/aeration-seeding"
+            Browse Services
+          </a>
+          <Link to="/CleanLawn/provider/signup"
             className="border-2 border-white/50 text-white font-bold text-base px-7 py-3.5 rounded-full no-underline hover:border-np-lite hover:text-np-lite transition-all">
-            Book Aeration & Seeding
+            Join as a Provider
           </Link>
         </div>
       </section>
 
-      {/* SERVICES */}
-      <section className="px-[8%] py-20 bg-np-surface">
-        <p className="pg-label">Our Services</p>
-        <h2 className="pg-title">Lawn Maintenance Made Simple</h2>
-        <p className="pg-sub mb-12">Professional service, booked in minutes.</p>
-        <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-          {SERVICES.map(s => (
-            <Link key={s.to} to={s.to} className="service-card no-underline">
-              <div className="service-icon">{s.icon}</div>
-              <h3 className="text-np-dark font-bold text-lg mb-2">{s.title}</h3>
-              <p className="text-np-muted text-sm leading-relaxed mb-4">{s.desc}</p>
-              <span className="text-np-accent text-sm font-semibold">Learn more &rarr;</span>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {/* CATEGORY SECTIONS */}
+      {CATEGORIES.map((cat, i) => (
+        <section
+          key={cat.id}
+          id={cat.id}
+          className={`px-[8%] py-20 ${i % 2 === 0 ? 'bg-np-surface' : 'bg-white'}`}
+        >
+          {/* Category header */}
+          <div className="flex items-center gap-4 mb-3">
+            <div className="w-12 h-12 rounded-2xl bg-np-lite/30 flex items-center justify-center flex-shrink-0">
+              {cat.icon}
+            </div>
+            <div>
+              <p className="pg-label mb-0">{cat.label}</p>
+              <p className="text-np-muted text-sm">{cat.tagline}</p>
+            </div>
+          </div>
+          <h2 className="pg-title mb-10">{cat.label}</h2>
 
-      {/* HOW IT WORKS */}
-      <section className="px-[8%] py-20 bg-white">
-        <div className="max-w-3xl mx-auto">
-          <p className="pg-label">Simple Process</p>
-          <h2 className="pg-title">How CleanLawn Works</h2>
-          <p className="pg-sub mb-12">From booking to a freshly cut lawn — it's that easy.</p>
-          <div className="grid md:grid-cols-3 gap-8">
-            {HOW_IT_WORKS.map(s => (
-              <div key={s.n} className="flex flex-col gap-3">
-                <div className="step-number">{s.n}</div>
-                <h3 className="font-bold text-np-dark text-lg">{s.title}</h3>
-                <p className="text-np-muted text-sm leading-relaxed">{s.desc}</p>
-              </div>
+          {/* Service cards */}
+          <div className="service-grid">
+            {cat.services.map(s => (
+              <Link key={s.to} to={s.to} className="service-card no-underline">
+                <h3 className="text-np-dark font-bold text-lg mb-2">{s.title}</h3>
+                <p className="text-np-muted text-sm leading-relaxed mb-4">{s.desc}</p>
+                <span className="text-np-accent text-sm font-semibold">Book now &rarr;</span>
+              </Link>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
+      ))}
 
       {/* PROVIDER CTA */}
       <section className="bg-np-dark text-white px-[8%] py-20">
         <div className="max-w-3xl mx-auto grid md:grid-cols-2 gap-12 items-center">
           <div>
             <p className="text-np-lite text-xs font-bold tracking-[2px] uppercase mb-2">For Professionals</p>
-            <h2 className="text-white text-3xl font-extrabold mb-4">Grow Your Lawn Care Business</h2>
+            <h2 className="text-white text-3xl font-extrabold mb-4">
+              Grow Your Lawn Care Business
+            </h2>
             <p className="text-white/70 leading-relaxed mb-8">
               Join the CleanLawn provider network. Get matched with customers in your area, manage your schedule, and grow your revenue — all from one dashboard.
             </p>
@@ -108,13 +128,12 @@ export default function CleanLawn() {
                 className="bg-np-accent text-np-dark font-extrabold px-7 py-3 rounded-full no-underline hover:bg-np-lite transition-all">
                 Join as a Provider
               </Link>
-              {user?.role === 'provider' && (
+              {user?.role === 'provider' ? (
                 <Link to="/CleanLawn/provider"
                   className="border-2 border-white/50 text-white font-bold px-6 py-3 rounded-full no-underline hover:border-np-lite hover:text-np-lite transition-all">
                   My Dashboard
                 </Link>
-              )}
-              {!user && (
+              ) : (
                 <Link to="/CleanLawn/provider"
                   className="border-2 border-white/50 text-white font-bold px-6 py-3 rounded-full no-underline hover:border-np-lite hover:text-np-lite transition-all">
                   Provider Login
@@ -140,11 +159,11 @@ export default function CleanLawn() {
 
       {/* CTA STRIP */}
       <section className="cta-section">
-        <h2>Ready for a Cleaner Lawn?</h2>
-        <p>Book a mowing or aeration visit today. Local professionals, transparent pricing.</p>
+        <h2>Ready for a Cleaner, Healthier Lawn?</h2>
+        <p>Browse our services and get a free quote from a local CleanLawn professional today.</p>
         <div className="flex gap-3 justify-center flex-wrap">
-          <Link to="/CleanLawn/mowing" className="btn-primary text-base px-8 py-4">Book Mowing</Link>
-          <Link to="/CleanLawn/aeration-seeding" className="btn-outline text-base px-8 py-4">Book Aeration</Link>
+          <Link to="/quote" className="btn-primary text-base px-8 py-4">Get a Free Quote</Link>
+          <Link to="/CleanLawn/provider/signup" className="btn-outline text-base px-8 py-4">Join as a Provider</Link>
         </div>
       </section>
     </>
