@@ -1,15 +1,6 @@
 import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { sha256, getRegisteredUsers, saveRegisteredUsers, RESERVED_EMAILS } from '../utils/auth';
-
-const EMAILJS_PUBLIC_KEY  = '';
-const EMAILJS_SERVICE_ID  = '';
-const EMAILJS_TEMPLATE_ID = '';
-const EMAIL_CONFIGURED = !!(EMAILJS_PUBLIC_KEY && EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID);
-
-function generateCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
+import { signUpUser, verifyEmailOtp, resendConfirmation, authErrorMessage, signInWithGoogle, signInWithFacebook } from '../utils/auth';
 
 function pwStrength(pw) {
   let score = 0;
@@ -30,7 +21,6 @@ export default function SignupPage() {
   const [confirm, setConfirm]   = useState('');
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
-  const [demoCode, setDemoCode] = useState('');
   const [otp, setOtp]           = useState(['','','','','','']);
   const [otpError, setOtpError] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
@@ -42,50 +32,21 @@ export default function SignupPage() {
   const handleRegister = async (e) => {
     e.preventDefault();
     setError('');
-    const lc = email.toLowerCase().trim();
-
-    if (RESERVED_EMAILS.includes(lc)) {
-      setError('This email is already in use. Please log in.');
-      return;
-    }
-    const existing = getRegisteredUsers();
-    if (existing.find(u => u.email === lc)) {
-      setError('An account with this email already exists.');
-      return;
-    }
     if (password !== confirm) { setError('Passwords do not match.'); return; }
     if (password.length < 8)  { setError('Password must be at least 8 characters.'); return; }
 
     setLoading(true);
-    try {
-      const hash = await sha256(password);
-      const code = generateCode();
+    const { data, error: err } = await signUpUser({ email, password, role: 'user' });
+    setLoading(false);
 
-      const users = getRegisteredUsers();
-      const newUser = { email: lc, hash, verified: false, verifyCode: code, registeredAt: Date.now() };
-      users.push(newUser);
-      saveRegisteredUsers(users);
+    if (err) { setError(authErrorMessage(err)); return; }
 
-      let sent = false;
-      if (EMAIL_CONFIGURED) {
-        try {
-          const emailjs = (await import('@emailjs/browser')).default;
-          emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-          await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-            to_email: lc,
-            verification_code: code,
-            user_name: lc.split('@')[0],
-          });
-          sent = true;
-        } catch { /* fall through to demo */ }
-      }
+    // If Supabase email confirmation is disabled, a session is returned immediately
+    if (data.session) { navigate('/'); return; }
 
-      if (!sent) setDemoCode(code);
-      setStep('verify');
-      startResendTimer();
-    } finally {
-      setLoading(false);
-    }
+    // Email confirmation enabled — show OTP entry
+    setStep('verify');
+    startResendTimer();
   };
 
   const startResendTimer = () => {
@@ -114,20 +75,21 @@ export default function SignupPage() {
     otpRefs.current[Math.min(pasted.length, 5)]?.focus();
   };
 
-  const handleVerify = (e) => {
+  const handleVerify = async (e) => {
     e.preventDefault();
     setOtpError('');
-    const code = otp.join('');
-    const users = getRegisteredUsers();
-    const idx = users.findIndex(u => u.email === email.toLowerCase().trim());
-    if (idx === -1 || users[idx].verifyCode !== code) {
-      setOtpError('Incorrect code. Please try again.');
-      return;
-    }
-    users[idx].verified = true;
-    delete users[idx].verifyCode;
-    saveRegisteredUsers(users);
+    const token = otp.join('');
+    if (token.length < 6) { setOtpError('Enter the full 6-digit code.'); return; }
+    setLoading(true);
+    const { error: err } = await verifyEmailOtp({ email, token });
+    setLoading(false);
+    if (err) { setOtpError('Incorrect or expired code. Please try again.'); return; }
     navigate('/login?registered=1');
+  };
+
+  const handleResend = async () => {
+    const { error: err } = await resendConfirmation(email);
+    if (!err) startResendTimer();
   };
 
   return (
@@ -190,6 +152,34 @@ export default function SignupPage() {
                 {loading ? 'Creating account...' : 'Create Account'}
               </button>
 
+              {/* Social login */}
+              <div>
+                <div className="flex items-center gap-3 my-1">
+                  <div className="flex-1 h-px bg-gray-200" />
+                  <span className="text-xs text-gray-400">or sign up with</span>
+                  <div className="flex-1 h-px bg-gray-200" />
+                </div>
+                <div className="space-y-2 mt-2">
+                  <button type="button" onClick={signInWithGoogle}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Google
+                  </button>
+                  <button type="button" onClick={signInWithFacebook}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#1877F2">
+                      <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
+                    </svg>
+                    Facebook
+                  </button>
+                </div>
+              </div>
+
               <p className="text-center text-sm text-gray-500 mt-1">
                 Already have an account?{' '}
                 <Link to="/login" className="text-green-600 hover:text-green-700 font-medium">
@@ -210,13 +200,6 @@ export default function SignupPage() {
                 Enter it below to activate your account.
               </p>
 
-              {demoCode && (
-                <div className="text-center py-3 rounded-lg bg-yellow-50 border border-yellow-200">
-                  <div className="text-xs text-yellow-700 font-medium mb-1">Demo mode — email not configured</div>
-                  <div className="text-3xl font-bold tracking-[0.4em] text-yellow-700">{demoCode}</div>
-                </div>
-              )}
-
               <div className="flex gap-2 justify-center" onPaste={handleOtpPaste}>
                 {otp.map((d, i) => (
                   <input key={i} type="text" inputMode="numeric" maxLength={1} value={d}
@@ -234,16 +217,16 @@ export default function SignupPage() {
                 </div>
               )}
 
-              <button type="submit"
-                className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors duration-150 text-sm"
-                style={{ cursor: 'pointer' }}>
-                Verify &amp; Activate
+              <button type="submit" disabled={loading}
+                className="w-full py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white font-semibold rounded-lg transition-colors duration-150 text-sm"
+                style={{ cursor: loading ? 'not-allowed' : 'pointer' }}>
+                {loading ? 'Verifying…' : 'Verify & Activate'}
               </button>
 
               <p className="text-center text-sm text-gray-500">
                 {resendTimer > 0
                   ? `Resend available in ${resendTimer}s`
-                  : <button type="button" onClick={startResendTimer}
+                  : <button type="button" onClick={handleResend}
                       className="text-green-600 hover:text-green-700 font-medium">
                       Resend code
                     </button>}

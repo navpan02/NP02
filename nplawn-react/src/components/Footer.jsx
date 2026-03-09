@@ -1,12 +1,23 @@
 import { Link } from 'react-router-dom';
 
 const SERVICES = [
-  { to: '/mowing',          label: 'Lawn Mowing' },
-  { to: '/tree-trimming',   label: 'Tree Trimming' },
-  { to: '/lawn-care',       label: 'Lawn Care Plans' },
-  { to: '/tree-shrubs',     label: 'Tree & Shrubs' },
-  { to: '/aeration-seeding',label: 'Aeration & Seeding' },
-  { to: '/landscape-design',label: 'Landscape Design' },
+  { to: '/lawn-care',                    label: 'Lawn Care Plans' },
+  { to: '/tree-shrubs',                  label: 'Tree & Shrub Plans' },
+  { to: '/CleanLawn/aeration-seeding',   label: 'Aeration & Seeding' },
+];
+
+const CLEANLAWN = [
+  { to: '/CleanLawn',                       label: 'CleanLawn Home' },
+  { to: '/CleanLawn/mowing',                label: 'Lawn Mowing' },
+  { to: '/CleanLawn/hedge-trimming',        label: 'Hedge Trimming' },
+  { to: '/CleanLawn/leaf-removal',          label: 'Leaf Removal' },
+  { to: '/CleanLawn/sod-installation',      label: 'Sod Installation' },
+  { to: '/CleanLawn/mulching',              label: 'Mulching' },
+  { to: '/CleanLawn/snow-removal',          label: 'Snow Removal' },
+  { to: '/CleanLawn/irrigation',            label: 'Irrigation Systems' },
+  { to: '/CleanLawn/landscaping-design',    label: 'Landscaping & Design' },
+  { to: '/CleanLawn/provider/signup',       label: 'Join as a Provider' },
+  { to: '/CleanLawn/provider',              label: 'Provider Portal' },
 ];
 
 const COMPANY = [
@@ -14,7 +25,6 @@ const COMPANY = [
   { to: '/blog',             label: 'Blog' },
   { to: '/faq',              label: 'FAQ' },
   { to: '/grass-guide',      label: 'Grass Type Guide' },
-  { to: '/quote-estimator',  label: 'Quote Estimator' },
   { to: '/contact',          label: 'Contact' },
   { to: '/lawn-care#plans',  label: 'View Plans' },
   { to: '/order',            label: 'Order Online' },
@@ -38,12 +48,12 @@ export default function Footer() {
             Professional lawn care and landscaping — trusted by hundreds of homeowners.
             Locally owned and operated since 2017.
           </p>
-          <Link to="/contact" className="footer-cta-link">Get a Free Quote &rarr;</Link>
+          <Link to="/quote" className="footer-cta-link">Get a Free Quote &rarr;</Link>
         </div>
 
         {/* Services */}
         <div>
-          <h4 className="footer-heading">Services</h4>
+          <h4 className="footer-heading">Lawn Care</h4>
           <ul className="footer-links">
             {SERVICES.map(s => (
               <li key={s.to}><Link to={s.to}>{s.label}</Link></li>
@@ -56,6 +66,16 @@ export default function Footer() {
           <h4 className="footer-heading">Company</h4>
           <ul className="footer-links">
             {COMPANY.map(c => (
+              <li key={c.to}><Link to={c.to}>{c.label}</Link></li>
+            ))}
+          </ul>
+        </div>
+
+        {/* CleanLawn */}
+        <div>
+          <h4 className="footer-heading">CleanLawn</h4>
+          <ul className="footer-links">
+            {CLEANLAWN.map(c => (
               <li key={c.to}><Link to={c.to}>{c.label}</Link></li>
             ))}
           </ul>

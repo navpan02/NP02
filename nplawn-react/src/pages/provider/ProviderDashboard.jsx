@@ -1,80 +1,248 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 
-/* ─────────────────────── localStorage helpers ─────────────────────── */
-function getProfile(email) {
-  try {
-    const all = JSON.parse(localStorage.getItem('nplawn_provider_profiles') || '{}');
-    return all[email] || null;
-  } catch { return null; }
+/* ─────────────────────── Default availability ─────────────────────── */
+const DEFAULT_AVAIL = {
+  weeklyWindows: {
+    Monday:    { enabled: true,  start: '08:00', end: '17:00' },
+    Tuesday:   { enabled: true,  start: '08:00', end: '17:00' },
+    Wednesday: { enabled: true,  start: '08:00', end: '17:00' },
+    Thursday:  { enabled: true,  start: '08:00', end: '17:00' },
+    Friday:    { enabled: true,  start: '08:00', end: '17:00' },
+    Saturday:  { enabled: false, start: '09:00', end: '13:00' },
+    Sunday:    { enabled: false, start: '09:00', end: '13:00' },
+  },
+  blockedDates: [],
+  acceptingRequests: true,
+  maxJobsPerDay: 4,
+  maxJobsPerWeek: 18,
+};
+
+/* ─────────────────────── Supabase helpers ─────────────────────── */
+async function dbGetProfile(email) {
+  const { data } = await supabase
+    .from('provider_profiles')
+    .select('*')
+    .eq('email', email)
+    .single();
+  return data || null;
 }
-function saveProfile(profile) {
-  const all = JSON.parse(localStorage.getItem('nplawn_provider_profiles') || '{}');
-  all[profile.email] = profile;
-  localStorage.setItem('nplawn_provider_profiles', JSON.stringify(all));
-}
-function getQuoteRequests(zips = []) {
-  try {
-    const all = JSON.parse(localStorage.getItem('nplawn_quote_requests') || '[]');
-    return zips.length ? all.filter(q => zips.includes(q.zipCode)) : all;
-  } catch { return []; }
-}
-function getProviderQuotes(email) {
-  try {
-    return JSON.parse(localStorage.getItem(`nplawn_pquotes_${email}`) || '[]');
-  } catch { return []; }
-}
-function saveProviderQuotes(email, quotes) {
-  localStorage.setItem(`nplawn_pquotes_${email}`, JSON.stringify(quotes));
-}
-function getJobs(email) {
-  try {
-    return JSON.parse(localStorage.getItem(`nplawn_jobs_${email}`) || '[]');
-  } catch { return []; }
-}
-function saveJobs(email, jobs) {
-  localStorage.setItem(`nplawn_jobs_${email}`, JSON.stringify(jobs));
-}
-function getMessages(email) {
-  try {
-    return JSON.parse(localStorage.getItem(`nplawn_msgs_${email}`) || '[]');
-  } catch { return []; }
-}
-function saveMessages(email, msgs) {
-  localStorage.setItem(`nplawn_msgs_${email}`, JSON.stringify(msgs));
-}
-function getAvailability(email) {
-  const defaults = {
-    weeklyWindows: {
-      Monday: { enabled: true, start: '08:00', end: '17:00' },
-      Tuesday: { enabled: true, start: '08:00', end: '17:00' },
-      Wednesday: { enabled: true, start: '08:00', end: '17:00' },
-      Thursday: { enabled: true, start: '08:00', end: '17:00' },
-      Friday: { enabled: true, start: '08:00', end: '17:00' },
-      Saturday: { enabled: false, start: '09:00', end: '13:00' },
-      Sunday: { enabled: false, start: '09:00', end: '13:00' },
-    },
-    blockedDates: [],
-    acceptingRequests: true,
-    maxJobsPerDay: 4,
-    maxJobsPerWeek: 18,
+
+async function dbSaveProfile(profile) {
+  const row = {
+    email:              profile.email,
+    business_name:      profile.businessName,
+    description:        profile.description,
+    phone:              profile.phone,
+    address:            profile.address,
+    years_in_business:  profile.yearsInBusiness ? parseInt(profile.yearsInBusiness) : null,
+    team_size:          profile.teamSize ? parseInt(profile.teamSize) : null,
+    equipment:          profile.equipment,
+    license_number:     profile.licenseNumber,
+    services_offered:   profile.servicesOffered || [],
+    service_areas:      profile.serviceAreas || [],
+    portfolio:          profile.portfolio || [],
+    rating:             profile.rating || null,
+    total_jobs:         profile.totalJobs || 0,
   };
-  try {
-    return JSON.parse(localStorage.getItem(`nplawn_avail_${email}`)) || defaults;
-  } catch { return defaults; }
-}
-function saveAvailability(email, avail) {
-  localStorage.setItem(`nplawn_avail_${email}`, JSON.stringify(avail));
+  const { error } = await supabase.from('provider_profiles').upsert(row);
+  return !error;
 }
 
-/* ─────────────────────── seed demo data ─────────────────────── */
-function seedDemoData(email) {
-  if (localStorage.getItem(`nplawn_demo_seeded_${email}`)) return;
+function rowToProfile(row) {
+  if (!row) return null;
+  return {
+    email:            row.email,
+    businessName:     row.business_name,
+    description:      row.description,
+    phone:            row.phone,
+    address:          row.address,
+    yearsInBusiness:  row.years_in_business,
+    teamSize:         row.team_size,
+    equipment:        row.equipment,
+    licenseNumber:    row.license_number,
+    servicesOffered:  row.services_offered || [],
+    serviceAreas:     row.service_areas || [],
+    portfolio:        row.portfolio || [],
+    rating:           row.rating,
+    totalJobs:        row.total_jobs,
+    createdAt:        row.created_at,
+  };
+}
 
-  // Demo provider profile
-  if (!getProfile(email)) {
-    saveProfile({
+async function dbGetQuoteRequests(zips = []) {
+  let q = supabase.from('quote_requests').select('*').eq('status', 'open').order('submitted_at', { ascending: false });
+  if (zips.length) q = q.in('zip_code', zips);
+  const { data } = await q;
+  return (data || []).map(r => ({
+    id:             r.id,
+    homeownerName:  r.homeowner_name,
+    homeownerEmail: r.homeowner_email,
+    serviceType:    r.service_type,
+    address:        r.address,
+    zipCode:        r.zip_code,
+    propertySize:   r.property_size,
+    description:    r.description,
+    photos:         r.photos || [],
+    submittedAt:    r.submitted_at,
+    status:         r.status,
+  }));
+}
+
+async function dbGetProviderQuotes(email) {
+  const { data } = await supabase
+    .from('provider_quotes')
+    .select('*')
+    .eq('provider_id', email)
+    .order('submitted_at', { ascending: false });
+  return (data || []).map(r => ({
+    id:                 r.id,
+    quoteRequestId:     r.quote_request_id,
+    providerId:         r.provider_id,
+    homeownerName:      r.homeowner_name,
+    serviceType:        r.service_type,
+    priceType:          r.price_type,
+    price:              r.price,
+    priceMax:           r.price_max,
+    estimatedDuration:  r.estimated_duration,
+    validityDays:       r.validity_days,
+    notes:              r.notes,
+    status:             r.status,
+    submittedAt:        r.submitted_at,
+  }));
+}
+
+async function dbInsertQuote(q) {
+  const { error } = await supabase.from('provider_quotes').insert({
+    id:                 q.id,
+    quote_request_id:   q.quoteRequestId,
+    provider_id:        q.providerId,
+    homeowner_name:     q.homeownerName,
+    service_type:       q.serviceType,
+    price_type:         q.priceType,
+    price:              q.price,
+    price_max:          q.priceMax || null,
+    estimated_duration: q.estimatedDuration,
+    validity_days:      q.validityDays,
+    notes:              q.notes,
+    status:             'pending',
+    submitted_at:       new Date().toISOString(),
+  });
+  return !error;
+}
+
+async function dbUpdateQuoteStatus(id, status) {
+  const { error } = await supabase.from('provider_quotes').update({ status }).eq('id', id);
+  return !error;
+}
+
+async function dbGetJobs(email) {
+  const { data } = await supabase
+    .from('provider_jobs')
+    .select('*')
+    .eq('provider_id', email)
+    .order('scheduled_date', { ascending: false });
+  return (data || []).map(r => ({
+    id:                 r.id,
+    providerId:         r.provider_id,
+    quoteId:            r.quote_id,
+    homeownerName:      r.homeowner_name,
+    homeownerEmail:     r.homeowner_email,
+    serviceType:        r.service_type,
+    address:            r.address,
+    scheduledDate:      r.scheduled_date,
+    scheduledTime:      r.scheduled_time,
+    status:             r.status,
+    isRecurring:        r.is_recurring,
+    recurringFrequency: r.recurring_frequency,
+    notes:              r.notes,
+  }));
+}
+
+async function dbUpdateJobStatus(id, status) {
+  const { error } = await supabase.from('provider_jobs').update({ status }).eq('id', id);
+  return !error;
+}
+
+async function dbRescheduleJob(id, date, time) {
+  const { error } = await supabase
+    .from('provider_jobs')
+    .update({ scheduled_date: date, scheduled_time: time, status: 'scheduled' })
+    .eq('id', id);
+  return !error;
+}
+
+async function dbGetMessages(email) {
+  const { data } = await supabase
+    .from('provider_messages')
+    .select('*')
+    .or(`from_id.eq.${email},to_id.eq.${email}`)
+    .order('sent_at', { ascending: true });
+  return (data || []).map(r => ({
+    id:        r.id,
+    threadId:  r.thread_id,
+    fromId:    r.from_id,
+    fromName:  r.from_name,
+    toId:      r.to_id,
+    content:   r.content,
+    sentAt:    r.sent_at,
+    read:      r.read,
+  }));
+}
+
+async function dbSendMessage(msg) {
+  const { error } = await supabase.from('provider_messages').insert({
+    id:        msg.id,
+    thread_id: msg.threadId,
+    from_id:   msg.fromId,
+    from_name: msg.fromName,
+    to_id:     msg.toId,
+    content:   msg.content,
+    sent_at:   msg.sentAt,
+    read:      msg.read,
+  });
+  return !error;
+}
+
+async function dbGetAvailability(email) {
+  const { data } = await supabase
+    .from('provider_availability')
+    .select('*')
+    .eq('provider_id', email)
+    .single();
+  if (!data) return DEFAULT_AVAIL;
+  return {
+    weeklyWindows:     data.weekly_windows || DEFAULT_AVAIL.weeklyWindows,
+    blockedDates:      data.blocked_dates || [],
+    acceptingRequests: data.accepting_requests,
+    maxJobsPerDay:     data.max_jobs_per_day,
+    maxJobsPerWeek:    data.max_jobs_per_week,
+  };
+}
+
+async function dbSaveAvailability(email, avail) {
+  const { error } = await supabase.from('provider_availability').upsert({
+    provider_id:        email,
+    weekly_windows:     avail.weeklyWindows,
+    blocked_dates:      avail.blockedDates,
+    accepting_requests: avail.acceptingRequests,
+    max_jobs_per_day:   avail.maxJobsPerDay,
+    max_jobs_per_week:  avail.maxJobsPerWeek,
+  });
+  return !error;
+}
+
+/* ─────────────────────── Seed demo data to Supabase ─────────────────────── */
+async function seedDemoData(email) {
+  // Use a localStorage flag so we only seed once per browser
+  if (localStorage.getItem(`nplawn_demo_seeded_v2_${email}`)) return;
+
+  // Seed profile if missing
+  const existing = await dbGetProfile(email);
+  if (!existing) {
+    await dbSaveProfile({
       email,
       businessName: 'Green Horizon Lawn Co.',
       description: 'Family-owned lawn care and landscaping serving Naperville & surrounding suburbs since 2015.',
@@ -89,144 +257,172 @@ function seedDemoData(email) {
       portfolio: [],
       rating: 4.8,
       totalJobs: 0,
-      createdAt: Date.now(),
     });
   }
 
-  // Demo quote requests
-  const qrs = [
-    { id: 'qr001', homeownerName: 'Raj Patel', homeownerEmail: 'raj@example.com', serviceType: 'Lawn Mowing', address: '402 Elm St, Naperville', zipCode: '60540', propertySize: 'Medium (3000–5000 sqft)', description: 'Need weekly mowing, backyard has a slight slope.', photos: [], submittedAt: new Date(Date.now() - 3600000).toISOString(), status: 'open' },
-    { id: 'qr002', homeownerName: 'Sarah Kim', homeownerEmail: 'sarah@example.com', serviceType: 'Tree Trimming', address: '88 Oak Ave, Lisle', zipCode: '60563', propertySize: 'Large (5000+ sqft)', description: '3 mature oaks need crown thinning before summer storms.', photos: [], submittedAt: new Date(Date.now() - 86400000).toISOString(), status: 'open' },
-    { id: 'qr003', homeownerName: 'Mike Torres', homeownerEmail: 'mike@example.com', serviceType: 'Aeration & Seeding', address: '211 Birch Ct, Woodridge', zipCode: '60517', propertySize: 'Small (under 3000 sqft)', description: 'Lawn is patchy, looking for spring aeration + overseeding.', photos: [], submittedAt: new Date(Date.now() - 172800000).toISOString(), status: 'open' },
-  ];
-  const existing = JSON.parse(localStorage.getItem('nplawn_quote_requests') || '[]');
-  const ids = new Set(existing.map(q => q.id));
-  const merged = [...existing, ...qrs.filter(q => !ids.has(q.id))];
-  localStorage.setItem('nplawn_quote_requests', JSON.stringify(merged));
+  // Seed demo quotes if none exist yet
+  const existingQuotes = await dbGetProviderQuotes(email);
+  if (existingQuotes.length === 0) {
+    await dbInsertQuote({
+      id: 'pq001', quoteRequestId: 'qr001', providerId: email,
+      homeownerName: 'Raj Patel', serviceType: 'Lawn Mowing',
+      priceType: 'flat', price: 65, priceMax: null,
+      estimatedDuration: '1.5 hours', validityDays: 7,
+      notes: 'Includes edging and cleanup.',
+    });
+    // Mark pq001 as accepted directly
+    await supabase.from('provider_quotes').update({ status: 'accepted' }).eq('id', 'pq001');
 
-  // Demo submitted quotes
-  const pquotes = [
-    { id: 'pq001', quoteRequestId: 'qr001', providerId: email, homeownerName: 'Raj Patel', serviceType: 'Lawn Mowing', priceType: 'flat', price: 65, estimatedDuration: '1.5 hours', validityDays: 7, notes: 'Includes edging and cleanup.', status: 'accepted', submittedAt: new Date(Date.now() - 2700000).toISOString() },
-    { id: 'pq002', quoteRequestId: 'qr002', providerId: email, homeownerName: 'Sarah Kim', serviceType: 'Tree Trimming', priceType: 'range', priceMin: 280, priceMax: 350, estimatedDuration: '3–4 hours', validityDays: 5, notes: 'Final price depends on canopy access.', status: 'pending', submittedAt: new Date(Date.now() - 3600000).toISOString() },
-  ];
-  saveProviderQuotes(email, pquotes);
+    await dbInsertQuote({
+      id: 'pq002', quoteRequestId: 'qr002', providerId: email,
+      homeownerName: 'Sarah Kim', serviceType: 'Tree Trimming',
+      priceType: 'range', price: 280, priceMax: 350,
+      estimatedDuration: '3–4 hours', validityDays: 5,
+      notes: 'Final price depends on canopy access.',
+    });
+  }
 
-  // Demo jobs
-  const today = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  const jobs = [
-    { id: 'job001', quoteId: 'pq001', homeownerName: 'Raj Patel', homeownerEmail: 'raj@example.com', serviceType: 'Lawn Mowing', address: '402 Elm St, Naperville', scheduledDate: today, scheduledTime: '09:00', status: 'scheduled', isRecurring: true, recurringFrequency: 'Weekly', notes: '' },
-    { id: 'job002', quoteId: null, homeownerName: 'Sarah Kim', homeownerEmail: 'sarah@example.com', serviceType: 'Tree Trimming', address: '88 Oak Ave, Lisle', scheduledDate: tomorrow, scheduledTime: '10:30', status: 'scheduled', isRecurring: false, recurringFrequency: null, notes: 'Bring chipper' },
-    { id: 'job003', quoteId: null, homeownerName: 'Dave Nguyen', homeownerEmail: 'dave@example.com', serviceType: 'Leaf Removal', address: '55 Cedar Ln, Downers Grove', scheduledDate: yesterday, scheduledTime: '08:00', status: 'complete', isRecurring: false, recurringFrequency: null, notes: '' },
-    { id: 'job004', quoteId: null, homeownerName: 'Lisa Grant', homeownerEmail: 'lisa@example.com', serviceType: 'Fertilization', address: '301 Pine Dr, Naperville', scheduledDate: yesterday, scheduledTime: '13:00', status: 'complete', isRecurring: false, recurringFrequency: null, notes: '' },
-  ];
-  saveJobs(email, jobs);
+  // Seed demo jobs if none exist
+  const existingJobs = await dbGetJobs(email);
+  if (existingJobs.length === 0) {
+    const today     = new Date().toISOString().slice(0, 10);
+    const tomorrow  = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const demoJobs = [
+      { id: 'job001', provider_id: email, quote_id: 'pq001', homeowner_name: 'Raj Patel',   homeowner_email: 'raj@example.com',   service_type: 'Lawn Mowing',   address: '402 Elm St, Naperville',    scheduled_date: today,     scheduled_time: '09:00', status: 'scheduled', is_recurring: true,  recurring_frequency: 'Weekly',  notes: '' },
+      { id: 'job002', provider_id: email, quote_id: null,     homeowner_name: 'Sarah Kim',   homeowner_email: 'sarah@example.com', service_type: 'Tree Trimming', address: '88 Oak Ave, Lisle',          scheduled_date: tomorrow,  scheduled_time: '10:30', status: 'scheduled', is_recurring: false, recurring_frequency: null,      notes: 'Bring chipper' },
+      { id: 'job003', provider_id: email, quote_id: null,     homeowner_name: 'Dave Nguyen', homeowner_email: 'dave@example.com',  service_type: 'Leaf Removal',  address: '55 Cedar Ln, Downers Grove', scheduled_date: yesterday, scheduled_time: '08:00', status: 'complete',  is_recurring: false, recurring_frequency: null,      notes: '' },
+      { id: 'job004', provider_id: email, quote_id: null,     homeowner_name: 'Lisa Grant',  homeowner_email: 'lisa@example.com',  service_type: 'Fertilization', address: '301 Pine Dr, Naperville',    scheduled_date: yesterday, scheduled_time: '13:00', status: 'complete',  is_recurring: false, recurring_frequency: null,      notes: '' },
+    ];
+    await supabase.from('provider_jobs').upsert(demoJobs, { onConflict: 'id' });
+  }
 
-  // Demo messages
-  const msgs = [
-    { id: 'msg001', threadId: 'thread_raj', fromId: 'raj@example.com', fromName: 'Raj Patel', toId: email, content: 'Hi! Can you come by Wednesday morning instead of Thursday?', sentAt: new Date(Date.now() - 1800000).toISOString(), read: false },
-    { id: 'msg002', threadId: 'thread_raj', fromId: email, fromName: 'Me', toId: 'raj@example.com', content: "Sure, Wednesday at 9 AM works. I'll confirm the day before.", sentAt: new Date(Date.now() - 900000).toISOString(), read: true },
-    { id: 'msg003', threadId: 'thread_sarah', fromId: 'sarah@example.com', fromName: 'Sarah Kim', toId: email, content: "Does your quote include hauling away the branches?", sentAt: new Date(Date.now() - 7200000).toISOString(), read: true },
-  ];
-  saveMessages(email, msgs);
+  // Seed demo messages if none exist
+  const existingMsgs = await dbGetMessages(email);
+  if (existingMsgs.length === 0) {
+    const demoMsgs = [
+      { id: 'msg001', thread_id: 'thread_raj',   from_id: 'raj@example.com',   from_name: 'Raj Patel',  to_id: email, content: 'Hi! Can you come by Wednesday morning instead of Thursday?',     sent_at: new Date(Date.now() - 1800000).toISOString(), read: false },
+      { id: 'msg002', thread_id: 'thread_raj',   from_id: email,               from_name: 'Me',         to_id: 'raj@example.com', content: "Sure, Wednesday at 9 AM works. I'll confirm the day before.", sent_at: new Date(Date.now() - 900000).toISOString(),  read: true  },
+      { id: 'msg003', thread_id: 'thread_sarah', from_id: 'sarah@example.com', from_name: 'Sarah Kim',  to_id: email, content: 'Does your quote include hauling away the branches?',              sent_at: new Date(Date.now() - 7200000).toISOString(), read: true  },
+    ];
+    await supabase.from('provider_messages').upsert(demoMsgs, { onConflict: 'id' });
+  }
 
-  localStorage.setItem(`nplawn_demo_seeded_${email}`, '1');
+  // Seed availability if missing
+  const existingAvail = await dbGetAvailability(email);
+  if (!existingAvail.weeklyWindows) {
+    await dbSaveAvailability(email, DEFAULT_AVAIL);
+  }
+
+  localStorage.setItem(`nplawn_demo_seeded_v2_${email}`, '1');
 }
 
-/* ─────────────────────── TABS list ─────────────────────── */
+/* ─────────────────────── TABS ─────────────────────── */
 const TABS = [
-  { id: 'overview',      label: 'Overview',     icon: '▦' },
-  { id: 'profile',       label: 'Profile',      icon: '👤' },
-  { id: 'portfolio',     label: 'Portfolio',    icon: '🖼' },
-  { id: 'quotes',        label: 'Quotes',       icon: '📋' },
-  { id: 'jobs',          label: 'Jobs',         icon: '📅' },
-  { id: 'messages',      label: 'Messages',     icon: '💬' },
-  { id: 'availability',  label: 'Availability', icon: '🕐' },
+  { id: 'overview',     label: 'Overview',     icon: '▦' },
+  { id: 'profile',      label: 'Profile',      icon: '👤' },
+  { id: 'portfolio',    label: 'Portfolio',    icon: '🖼' },
+  { id: 'quotes',       label: 'Quotes',       icon: '📋' },
+  { id: 'jobs',         label: 'Jobs',         icon: '📅' },
+  { id: 'messages',     label: 'Messages',     icon: '💬' },
+  { id: 'availability', label: 'Availability', icon: '🕐' },
 ];
 
 const STATUS_COLORS = {
-  scheduled: 'bg-blue-100 text-blue-700',
-  'in-progress': 'bg-yellow-100 text-yellow-700',
-  complete: 'bg-green-100 text-green-700',
-  accepted: 'bg-green-100 text-green-700',
-  pending: 'bg-yellow-100 text-yellow-700',
-  withdrawn: 'bg-gray-100 text-gray-500',
-  rejected: 'bg-red-100 text-red-600',
-  open: 'bg-blue-100 text-blue-700',
+  scheduled:    'bg-blue-100 text-blue-700',
+  'in-progress':'bg-yellow-100 text-yellow-700',
+  complete:     'bg-green-100 text-green-700',
+  accepted:     'bg-green-100 text-green-700',
+  pending:      'bg-yellow-100 text-yellow-700',
+  withdrawn:    'bg-gray-100 text-gray-500',
+  rejected:     'bg-red-100 text-red-600',
+  open:         'bg-blue-100 text-blue-700',
 };
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
 /* ═══════════════════════════════════════════════════════════════ */
 export default function ProviderDashboard() {
-  const { user, logout } = useAuth();
+  const { user, logout, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState('overview');
-
   const email = user?.email || '';
 
-  // data state
-  const [profile, setProfile]       = useState(null);
-  const [quoteReqs, setQuoteReqs]   = useState([]);
-  const [myQuotes, setMyQuotes]     = useState([]);
-  const [jobs, setJobs]             = useState([]);
-  const [messages, setMessages]     = useState([]);
-  const [avail, setAvail]           = useState(null);
+  const [dataLoading, setDataLoading]   = useState(true);
+  const [profile, setProfile]           = useState(null);
+  const [quoteReqs, setQuoteReqs]       = useState([]);
+  const [myQuotes, setMyQuotes]         = useState([]);
+  const [jobs, setJobs]                 = useState([]);
+  const [messages, setMessages]         = useState([]);
+  const [avail, setAvail]               = useState(null);
 
-  // profile edit state
   const [profileDraft, setProfileDraft] = useState(null);
   const [profileSaved, setProfileSaved] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
 
-  // quote form state
-  const [quoteForm, setQuoteForm] = useState(null); // { requestId } or null
-  const [qPrice, setQPrice]           = useState('');
-  const [qPriceType, setQPriceType]   = useState('flat');
-  const [qPriceMax, setQPriceMax]     = useState('');
-  const [qDuration, setQDuration]     = useState('');
-  const [qValidity, setQValidity]     = useState('7');
-  const [qNotes, setQNotes]           = useState('');
+  const [quoteForm, setQuoteForm]       = useState(null);
+  const [qPrice, setQPrice]             = useState('');
+  const [qPriceType, setQPriceType]     = useState('flat');
+  const [qPriceMax, setQPriceMax]       = useState('');
+  const [qDuration, setQDuration]       = useState('');
+  const [qValidity, setQValidity]       = useState('7');
+  const [qNotes, setQNotes]             = useState('');
+  const [quoteSubmitting, setQuoteSubmitting] = useState(false);
 
-  // new message state
   const [activeThread, setActiveThread] = useState(null);
-  const [newMsg, setNewMsg] = useState('');
+  const [newMsg, setNewMsg]             = useState('');
 
-  // job reschedule modal
   const [rescheduleJob, setRescheduleJob] = useState(null);
-  const [newDate, setNewDate] = useState('');
-  const [newTime, setNewTime] = useState('');
+  const [newDate, setNewDate]           = useState('');
+  const [newTime, setNewTime]           = useState('');
 
-  // portfolio
   const [portfolioItems, setPortfolioItems] = useState([]);
   const [portfolioLabel, setPortfolioLabel] = useState('');
 
-  // block date
-  const [blockDate, setBlockDate] = useState('');
+  const [blockDate, setBlockDate]       = useState('');
 
+  /* ── auth guard ── */
   useEffect(() => {
+    if (authLoading) return;
     if (!user) { navigate('/login'); return; }
     if (user.role !== 'provider' && user.role !== 'admin') { navigate('/'); return; }
-    seedDemoData(email);
-    reload();
-  }, [email]);
+    loadAll();
+  }, [authLoading, email]);
 
-  function reload() {
-    const p = getProfile(email);
-    setProfile(p);
-    setProfileDraft(p ? { ...p } : null);
-    setPortfolioItems(p?.portfolio || []);
-    const reqs = getQuoteRequests(p?.serviceAreas || []);
-    setQuoteReqs(reqs);
-    setMyQuotes(getProviderQuotes(email));
-    setJobs(getJobs(email));
-    setMessages(getMessages(email));
-    setAvail(getAvailability(email));
+  async function loadAll() {
+    setDataLoading(true);
+    try {
+      // Seed demo data for the demo provider account (no-op if already done)
+      await seedDemoData(email);
+
+      const p = await dbGetProfile(email);
+      const profile = rowToProfile(p);
+      setProfile(profile);
+      setProfileDraft(profile ? { ...profile } : null);
+      setPortfolioItems(profile?.portfolio || []);
+
+      const [reqs, quotes, jobList, msgs, availability] = await Promise.all([
+        dbGetQuoteRequests(profile?.serviceAreas || []),
+        dbGetProviderQuotes(email),
+        dbGetJobs(email),
+        dbGetMessages(email),
+        dbGetAvailability(email),
+      ]);
+
+      setQuoteReqs(reqs);
+      setMyQuotes(quotes);
+      setJobs(jobList);
+      setMessages(msgs);
+      setAvail(availability);
+    } finally {
+      setDataLoading(false);
+    }
   }
 
   /* ── derived stats ── */
-  const activeJobs    = jobs.filter(j => j.status !== 'complete').length;
-  const pendingQuotes = myQuotes.filter(q => q.status === 'pending').length;
-  const totalDone     = jobs.filter(j => j.status === 'complete').length;
+  const activeJobs     = jobs.filter(j => j.status !== 'complete').length;
+  const pendingQuotes  = myQuotes.filter(q => q.status === 'pending').length;
+  const totalDone      = jobs.filter(j => j.status === 'complete').length;
   const acceptedQuotes = myQuotes.filter(q => q.status === 'accepted').length;
   const totalQuotes    = myQuotes.length;
   const convRate       = totalQuotes ? Math.round((acceptedQuotes / totalQuotes) * 100) : 0;
@@ -237,17 +433,30 @@ export default function ProviderDashboard() {
   /* ── handlers ── */
   function handleLogout() { logout(); navigate('/'); }
 
-  function handleProfileSave(e) {
+  async function handleProfileSave(e) {
     e.preventDefault();
-    saveProfile(profileDraft);
-    setProfile({ ...profileDraft });
-    setProfileSaved(true);
-    setTimeout(() => setProfileSaved(false), 2500);
+    setProfileSaving(true);
+    const ok = await dbSaveProfile(profileDraft);
+    if (ok) {
+      setProfile({ ...profileDraft });
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 2500);
+      // Reload quote requests in case service areas changed
+      const reqs = await dbGetQuoteRequests(profileDraft.serviceAreas || []);
+      setQuoteReqs(reqs);
+    }
+    setProfileSaving(false);
   }
 
-  function submitQuote(reqId) {
+  async function savePortfolio(items) {
+    const updated = { ...(profile || {}), portfolio: items };
+    await dbSaveProfile(updated);
+  }
+
+  async function submitQuote(reqId) {
     const req = quoteReqs.find(r => r.id === reqId);
-    if (!req) return;
+    if (!req || quoteSubmitting) return;
+    setQuoteSubmitting(true);
     const newQ = {
       id: `pq${Date.now()}`,
       quoteRequestId: reqId,
@@ -255,42 +464,42 @@ export default function ProviderDashboard() {
       homeownerName: req.homeownerName,
       serviceType: req.serviceType,
       priceType: qPriceType,
-      price: qPriceType === 'flat' ? parseFloat(qPrice) : parseFloat(qPrice),
+      price: parseFloat(qPrice),
       priceMax: qPriceType === 'range' ? parseFloat(qPriceMax) : undefined,
       estimatedDuration: qDuration,
       validityDays: parseInt(qValidity),
       notes: qNotes,
-      status: 'pending',
-      submittedAt: new Date().toISOString(),
     };
-    const updated = [...myQuotes, newQ];
-    saveProviderQuotes(email, updated);
-    setMyQuotes(updated);
-    setQuoteForm(null);
-    setQPrice(''); setQPriceMax(''); setQDuration(''); setQValidity('7'); setQNotes('');
+    const ok = await dbInsertQuote(newQ);
+    if (ok) {
+      const quotes = await dbGetProviderQuotes(email);
+      setMyQuotes(quotes);
+      setQuoteForm(null);
+      setQPrice(''); setQPriceMax(''); setQDuration(''); setQValidity('7'); setQNotes('');
+    }
+    setQuoteSubmitting(false);
   }
 
-  function withdrawQuote(qid) {
-    const updated = myQuotes.map(q => q.id === qid ? { ...q, status: 'withdrawn' } : q);
-    saveProviderQuotes(email, updated);
-    setMyQuotes(updated);
+  async function withdrawQuote(qid) {
+    const ok = await dbUpdateQuoteStatus(qid, 'withdrawn');
+    if (ok) setMyQuotes(prev => prev.map(q => q.id === qid ? { ...q, status: 'withdrawn' } : q));
   }
 
-  function updateJobStatus(jid, status) {
-    const updated = jobs.map(j => j.id === jid ? { ...j, status } : j);
-    saveJobs(email, updated);
-    setJobs(updated);
+  async function updateJobStatus(jid, status) {
+    const ok = await dbUpdateJobStatus(jid, status);
+    if (ok) setJobs(prev => prev.map(j => j.id === jid ? { ...j, status } : j));
   }
 
-  function doReschedule() {
-    const updated = jobs.map(j => j.id === rescheduleJob.id
-      ? { ...j, scheduledDate: newDate, scheduledTime: newTime, status: 'scheduled' } : j);
-    saveJobs(email, updated);
-    setJobs(updated);
-    setRescheduleJob(null);
+  async function doReschedule() {
+    const ok = await dbRescheduleJob(rescheduleJob.id, newDate, newTime);
+    if (ok) {
+      setJobs(prev => prev.map(j => j.id === rescheduleJob.id
+        ? { ...j, scheduledDate: newDate, scheduledTime: newTime, status: 'scheduled' } : j));
+      setRescheduleJob(null);
+    }
   }
 
-  function sendMessage() {
+  async function sendMessage() {
     if (!newMsg.trim() || !activeThread) return;
     const thread = getThreads().find(t => t.threadId === activeThread);
     const msg = {
@@ -303,17 +512,65 @@ export default function ProviderDashboard() {
       sentAt: new Date().toISOString(),
       read: true,
     };
-    const updated = [...messages, msg];
-    saveMessages(email, updated);
-    setMessages(updated);
-    setNewMsg('');
+    const ok = await dbSendMessage(msg);
+    if (ok) {
+      setMessages(prev => [...prev, msg]);
+      setNewMsg('');
+    }
+  }
+
+  async function addPortfolioItem() {
+    if (!portfolioLabel.trim()) return;
+    const item = { id: `port${Date.now()}`, label: portfolioLabel.trim(), addedAt: new Date().toISOString() };
+    const updated = [...portfolioItems, item];
+    setPortfolioItems(updated);
+    setPortfolioLabel('');
+    await savePortfolio(updated);
+  }
+
+  async function removePortfolioItem(id) {
+    const updated = portfolioItems.filter(i => i.id !== id);
+    setPortfolioItems(updated);
+    await savePortfolio(updated);
+  }
+
+  async function toggleAccepting() {
+    const updated = { ...avail, acceptingRequests: !avail.acceptingRequests };
+    setAvail(updated);
+    await dbSaveAvailability(email, updated);
+  }
+
+  async function toggleAvailDay(day) {
+    const updated = { ...avail, weeklyWindows: { ...avail.weeklyWindows, [day]: { ...avail.weeklyWindows[day], enabled: !avail.weeklyWindows[day].enabled } } };
+    setAvail(updated);
+    await dbSaveAvailability(email, updated);
+  }
+
+  async function updateAvailWindow(day, field, val) {
+    const updated = { ...avail, weeklyWindows: { ...avail.weeklyWindows, [day]: { ...avail.weeklyWindows[day], [field]: val } } };
+    setAvail(updated);
+    await dbSaveAvailability(email, updated);
+  }
+
+  async function addBlockDate() {
+    if (!blockDate || (avail.blockedDates || []).includes(blockDate)) return;
+    const updated = { ...avail, blockedDates: [...(avail.blockedDates || []), blockDate].sort() };
+    setAvail(updated);
+    await dbSaveAvailability(email, updated);
+    setBlockDate('');
+  }
+
+  async function removeBlockDate(d) {
+    const updated = { ...avail, blockedDates: (avail.blockedDates || []).filter(x => x !== d) };
+    setAvail(updated);
+    await dbSaveAvailability(email, updated);
   }
 
   function getThreads() {
     const threadMap = {};
     messages.forEach(m => {
-      const partnerId = m.fromId === email ? m.toId : m.fromId;
-      const partnerName = m.fromId === email ? (m.toId.split('@')[0]) : m.fromName;
+      const partnerId   = m.fromId === email ? m.toId   : m.fromId;
+      const partnerName = m.fromId === email ? m.toId.split('@')[0] : m.fromName;
       if (!threadMap[m.threadId]) {
         threadMap[m.threadId] = { threadId: m.threadId, partnerId, partnerName, msgs: [], unread: 0 };
       }
@@ -324,52 +581,20 @@ export default function ProviderDashboard() {
       new Date(b.msgs.at(-1)?.sentAt) - new Date(a.msgs.at(-1)?.sentAt));
   }
 
-  function toggleAvailDay(day) {
-    const updated = { ...avail, weeklyWindows: { ...avail.weeklyWindows, [day]: { ...avail.weeklyWindows[day], enabled: !avail.weeklyWindows[day].enabled } } };
-    setAvail(updated);
-    saveAvailability(email, updated);
-  }
-  function updateAvailWindow(day, field, val) {
-    const updated = { ...avail, weeklyWindows: { ...avail.weeklyWindows, [day]: { ...avail.weeklyWindows[day], [field]: val } } };
-    setAvail(updated);
-    saveAvailability(email, updated);
-  }
-  function addBlockDate() {
-    if (!blockDate || avail.blockedDates.includes(blockDate)) return;
-    const updated = { ...avail, blockedDates: [...avail.blockedDates, blockDate].sort() };
-    setAvail(updated);
-    saveAvailability(email, updated);
-    setBlockDate('');
-  }
-  function removeBlockDate(d) {
-    const updated = { ...avail, blockedDates: avail.blockedDates.filter(x => x !== d) };
-    setAvail(updated);
-    saveAvailability(email, updated);
-  }
-  function toggleAccepting() {
-    const updated = { ...avail, acceptingRequests: !avail.acceptingRequests };
-    setAvail(updated);
-    saveAvailability(email, updated);
-  }
-
-  function addPortfolioItem() {
-    if (!portfolioLabel.trim()) return;
-    const item = { id: `port${Date.now()}`, label: portfolioLabel.trim(), addedAt: new Date().toISOString() };
-    const updated = [...portfolioItems, item];
-    setPortfolioItems(updated);
-    const p = { ...(profile || {}), portfolio: updated };
-    saveProfile(p);
-    setPortfolioLabel('');
-  }
-  function removePortfolioItem(id) {
-    const updated = portfolioItems.filter(i => i.id !== id);
-    setPortfolioItems(updated);
-    const p = { ...(profile || {}), portfolio: updated };
-    saveProfile(p);
-  }
-
   const threads = getThreads();
   const activeThreadData = threads.find(t => t.threadId === activeThread);
+
+  /* ── loading screen ── */
+  if (authLoading || dataLoading) {
+    return (
+      <div className="min-h-screen bg-np-dark flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 border-2 border-np-lite border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-white/50 text-sm">Loading provider portal…</p>
+        </div>
+      </div>
+    );
+  }
 
   /* ═══════════════════ RENDER ═══════════════════ */
   return (
@@ -441,25 +666,22 @@ export default function ProviderDashboard() {
                 {profile?.businessName || email.split('@')[0]}
               </h1>
 
-              {/* Stats grid */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Active Jobs" value={activeJobs} sub="in schedule" color="text-blue-600" />
-                <StatCard label="Pending Quotes" value={pendingQuotes} sub="awaiting response" color="text-yellow-600" />
-                <StatCard label="Earnings (YTD)" value={`$${demoEarnings}`} sub="accepted quotes" color="text-np-green" />
-                <StatCard label="Jobs Completed" value={totalDone} sub="all time" color="text-np-mid" />
+                <StatCard label="Active Jobs"     value={activeJobs}        sub="in schedule"       color="text-blue-600" />
+                <StatCard label="Pending Quotes"  value={pendingQuotes}     sub="awaiting response" color="text-yellow-600" />
+                <StatCard label="Earnings (YTD)"  value={`$${demoEarnings}`} sub="accepted quotes"  color="text-np-green" />
+                <StatCard label="Jobs Completed"  value={totalDone}         sub="all time"          color="text-np-mid" />
               </div>
 
-              {/* Performance metrics */}
               <div className="bg-white rounded-2xl border border-np-border p-5">
                 <h2 className="font-bold text-np-text mb-4">Performance</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  <Metric label="Conversion Rate" value={`${convRate}%`} hint="Quote → Job" />
-                  <Metric label="Avg. Rating" value="4.8 ★" hint="from 12 reviews" />
-                  <Metric label="Response Time" value="< 2 hrs" hint="avg. this month" />
+                  <Metric label="Conversion Rate" value={`${convRate}%`}   hint="Quote → Job" />
+                  <Metric label="Avg. Rating"      value="4.8 ★"           hint="from 12 reviews" />
+                  <Metric label="Response Time"    value="< 2 hrs"         hint="avg. this month" />
                 </div>
               </div>
 
-              {/* Upcoming jobs */}
               <div className="bg-white rounded-2xl border border-np-border p-5">
                 <h2 className="font-bold text-np-text mb-4">Upcoming Jobs</h2>
                 {jobs.filter(j => j.status !== 'complete').length === 0
@@ -471,21 +693,16 @@ export default function ProviderDashboard() {
                         <p className="text-sm font-semibold text-np-text truncate">{j.serviceType} — {j.homeownerName}</p>
                         <p className="text-xs text-gray-400">{j.scheduledDate} at {j.scheduledTime} · {j.address}</p>
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[j.status]}`}>
-                        {j.status}
-                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[j.status]}`}>{j.status}</span>
                     </div>
                   ))
                 }
               </div>
 
-              {/* Recent messages preview */}
               {unreadCount > 0 && (
                 <div className="bg-white rounded-2xl border border-np-border p-5 cursor-pointer hover:border-np-accent transition-colors"
                   onClick={() => setTab('messages')}>
-                  <h2 className="font-bold text-np-text mb-3">
-                    Unread Messages <span className="text-np-accent">({unreadCount})</span>
-                  </h2>
+                  <h2 className="font-bold text-np-text mb-3">Unread Messages <span className="text-np-accent">({unreadCount})</span></h2>
                   {messages.filter(m => !m.read && m.toId === email).slice(0, 2).map(m => (
                     <div key={m.id} className="flex gap-3 items-start py-2 border-b border-gray-100 last:border-0">
                       <div className="w-8 h-8 rounded-full bg-np-lite/30 flex items-center justify-center text-sm font-bold text-np-green">
@@ -504,9 +721,7 @@ export default function ProviderDashboard() {
 
           {/* ── PROFILE ── */}
           {tab === 'profile' && !profileDraft && (
-            <div className="text-center py-16 text-gray-400">
-              <p className="text-sm">Loading profile…</p>
-            </div>
+            <div className="text-center py-16 text-gray-400"><p className="text-sm">Loading profile…</p></div>
           )}
           {tab === 'profile' && profileDraft && (
             <div className="max-w-2xl space-y-6">
@@ -520,17 +735,16 @@ export default function ProviderDashboard() {
                     className="w-full px-4 py-2.5 text-sm rounded-lg border border-gray-300 outline-none focus:border-np-green focus:ring-2 focus:ring-green-100 resize-none transition-all" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <PField label="Phone" value={profileDraft.phone || ''} onChange={v => setProfileDraft(d => ({ ...d, phone: v }))} />
+                  <PField label="Phone"             value={profileDraft.phone || ''}            onChange={v => setProfileDraft(d => ({ ...d, phone: v }))} />
                   <PField label="Years in Business" type="number" value={profileDraft.yearsInBusiness || ''} onChange={v => setProfileDraft(d => ({ ...d, yearsInBusiness: v }))} />
                 </div>
                 <PField label="Business Address" value={profileDraft.address || ''} onChange={v => setProfileDraft(d => ({ ...d, address: v }))} />
                 <div className="grid grid-cols-2 gap-4">
-                  <PField label="Team Size" type="number" value={profileDraft.teamSize || ''} onChange={v => setProfileDraft(d => ({ ...d, teamSize: v }))} />
-                  <PField label="License Number" value={profileDraft.licenseNumber || ''} onChange={v => setProfileDraft(d => ({ ...d, licenseNumber: v }))} />
+                  <PField label="Team Size"       type="number" value={profileDraft.teamSize || ''}       onChange={v => setProfileDraft(d => ({ ...d, teamSize: v }))} />
+                  <PField label="License Number"  value={profileDraft.licenseNumber || ''}  onChange={v => setProfileDraft(d => ({ ...d, licenseNumber: v }))} />
                 </div>
                 <PField label="Equipment / Fleet" value={profileDraft.equipment || ''} onChange={v => setProfileDraft(d => ({ ...d, equipment: v }))} />
 
-                {/* Services offered */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Services Offered</label>
                   <div className="flex flex-wrap gap-2">
@@ -538,21 +752,14 @@ export default function ProviderDashboard() {
                       const active = (profileDraft.servicesOffered || []).includes(s);
                       return (
                         <button key={s} type="button"
-                          onClick={() => setProfileDraft(d => ({
-                            ...d,
-                            servicesOffered: active
-                              ? (d.servicesOffered || []).filter(x => x !== s)
-                              : [...(d.servicesOffered || []), s]
-                          }))}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                            active ? 'bg-np-green text-white border-np-green' : 'bg-white text-gray-600 border-gray-300 hover:border-np-green'
-                          }`}>{s}</button>
+                          onClick={() => setProfileDraft(d => ({ ...d, servicesOffered: active ? (d.servicesOffered||[]).filter(x=>x!==s) : [...(d.servicesOffered||[]),s] }))}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${active ? 'bg-np-green text-white border-np-green' : 'bg-white text-gray-600 border-gray-300 hover:border-np-green'}`}>{s}
+                        </button>
                       );
                     })}
                   </div>
                 </div>
 
-                {/* Service areas */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Service Areas (ZIP Codes)</label>
                   <div className="flex flex-wrap gap-2">
@@ -560,23 +767,18 @@ export default function ProviderDashboard() {
                       const active = (profileDraft.serviceAreas || []).includes(z);
                       return (
                         <button key={z} type="button"
-                          onClick={() => setProfileDraft(d => ({
-                            ...d,
-                            serviceAreas: active
-                              ? (d.serviceAreas || []).filter(x => x !== z)
-                              : [...(d.serviceAreas || []), z]
-                          }))}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                            active ? 'bg-np-accent text-np-dark border-np-accent' : 'bg-white text-gray-600 border-gray-300 hover:border-np-accent'
-                          }`}>{z}</button>
+                          onClick={() => setProfileDraft(d => ({ ...d, serviceAreas: active ? (d.serviceAreas||[]).filter(x=>x!==z) : [...(d.serviceAreas||[]),z] }))}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${active ? 'bg-np-accent text-np-dark border-np-accent' : 'bg-white text-gray-600 border-gray-300 hover:border-np-accent'}`}>{z}
+                        </button>
                       );
                     })}
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3 pt-1">
-                  <button type="submit" className="px-6 py-2.5 bg-np-green hover:bg-np-mid text-white font-semibold rounded-lg text-sm transition-colors">
-                    Save Changes
+                  <button type="submit" disabled={profileSaving}
+                    className="px-6 py-2.5 bg-np-green hover:bg-np-mid disabled:opacity-60 text-white font-semibold rounded-lg text-sm transition-colors">
+                    {profileSaving ? 'Saving…' : 'Save Changes'}
                   </button>
                   {profileSaved && <span className="text-sm text-np-green font-medium">Saved ✓</span>}
                 </div>
@@ -594,18 +796,10 @@ export default function ProviderDashboard() {
                   <input type="text" value={portfolioLabel} onChange={e => setPortfolioLabel(e.target.value)}
                     placeholder="Photo label e.g. 'Before & After — Oak Park Mow'" onKeyDown={e => e.key === 'Enter' && addPortfolioItem()}
                     className="flex-1 px-4 py-2.5 text-sm rounded-lg border border-gray-300 outline-none focus:border-np-green focus:ring-2 focus:ring-green-100 transition-all" />
-                  <button onClick={addPortfolioItem}
-                    className="px-4 py-2 bg-np-green text-white rounded-lg text-sm font-medium hover:bg-np-mid transition-colors">
-                    + Add
-                  </button>
+                  <button onClick={addPortfolioItem} className="px-4 py-2 bg-np-green text-white rounded-lg text-sm font-medium hover:bg-np-mid transition-colors">+ Add</button>
                 </div>
                 {portfolioItems.length === 0
-                  ? (
-                    <div className="text-center py-12 text-gray-300">
-                      <div className="text-5xl mb-3">🖼</div>
-                      <p className="text-sm">No portfolio items yet. Add a label above to get started.</p>
-                    </div>
-                  )
+                  ? <div className="text-center py-12 text-gray-300"><div className="text-5xl mb-3">🖼</div><p className="text-sm">No portfolio items yet.</p></div>
                   : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                       {portfolioItems.map(item => (
@@ -613,9 +807,7 @@ export default function ProviderDashboard() {
                           <div className="text-4xl mb-2">📸</div>
                           <p className="text-xs text-center text-gray-500 px-2">{item.label}</p>
                           <button onClick={() => removePortfolioItem(item.id)}
-                            className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs hidden group-hover:flex items-center justify-center font-bold">
-                            ×
-                          </button>
+                            className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs hidden group-hover:flex items-center justify-center font-bold">×</button>
                         </div>
                       ))}
                     </div>
@@ -630,7 +822,6 @@ export default function ProviderDashboard() {
             <div className="space-y-6">
               <h1 className="text-xl font-bold text-np-text">Quote Management</h1>
 
-              {/* Incoming requests */}
               <section>
                 <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Incoming Requests</h2>
                 {quoteReqs.filter(r => r.status === 'open').length === 0
@@ -646,9 +837,7 @@ export default function ProviderDashboard() {
                             <p className="text-xs text-gray-400 mt-0.5">{req.propertySize} · ZIP {req.zipCode} · {new Date(req.submittedAt).toLocaleDateString()}</p>
                           </div>
                           {alreadyQuoted
-                            ? <span className={`text-xs px-2.5 py-1 rounded-full font-medium shrink-0 ${STATUS_COLORS[alreadyQuoted.status]}`}>
-                                Quote {alreadyQuoted.status}
-                              </span>
+                            ? <span className={`text-xs px-2.5 py-1 rounded-full font-medium shrink-0 ${STATUS_COLORS[alreadyQuoted.status]}`}>Quote {alreadyQuoted.status}</span>
                             : <button onClick={() => setQuoteForm(req.id)}
                                 className="shrink-0 px-4 py-2 bg-np-green text-white text-sm font-medium rounded-lg hover:bg-np-mid transition-colors">
                                 Submit Quote
@@ -657,7 +846,6 @@ export default function ProviderDashboard() {
                         </div>
                         <p className="text-sm text-gray-600 bg-gray-50 rounded-lg px-4 py-2">{req.description}</p>
 
-                        {/* Inline quote form */}
                         {quoteForm === req.id && (
                           <div className="mt-4 border-t border-gray-100 pt-4 space-y-3">
                             <p className="text-sm font-semibold text-np-text">Your Quote</p>
@@ -701,9 +889,9 @@ export default function ProviderDashboard() {
                                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:border-np-green resize-none" />
                             </div>
                             <div className="flex gap-2">
-                              <button onClick={() => submitQuote(req.id)}
-                                className="px-5 py-2 bg-np-green text-white text-sm font-medium rounded-lg hover:bg-np-mid transition-colors">
-                                Send Quote
+                              <button onClick={() => submitQuote(req.id)} disabled={quoteSubmitting}
+                                className="px-5 py-2 bg-np-green text-white text-sm font-medium rounded-lg hover:bg-np-mid disabled:opacity-60 transition-colors">
+                                {quoteSubmitting ? 'Sending…' : 'Send Quote'}
                               </button>
                               <button onClick={() => setQuoteForm(null)}
                                 className="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors">
@@ -718,7 +906,6 @@ export default function ProviderDashboard() {
                 }
               </section>
 
-              {/* My submitted quotes */}
               <section>
                 <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">My Submitted Quotes</h2>
                 {myQuotes.length === 0
@@ -728,21 +915,13 @@ export default function ProviderDashboard() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-np-text text-sm">{q.serviceType} — {q.homeownerName}</p>
                         <p className="text-xs text-gray-400 mt-0.5">
-                          {q.priceType === 'flat'
-                            ? `$${q.price} flat`
-                            : `$${q.price}–$${q.priceMax} range`
-                          } · {q.estimatedDuration} · Valid {q.validityDays}d
+                          {q.priceType === 'flat' ? `$${q.price} flat` : `$${q.price}–$${q.priceMax} range`} · {q.estimatedDuration} · Valid {q.validityDays}d
                         </p>
                         {q.notes && <p className="text-xs text-gray-500 mt-1 truncate">{q.notes}</p>}
                       </div>
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium shrink-0 ${STATUS_COLORS[q.status]}`}>
-                        {q.status}
-                      </span>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium shrink-0 ${STATUS_COLORS[q.status]}`}>{q.status}</span>
                       {q.status === 'pending' && (
-                        <button onClick={() => withdrawQuote(q.id)}
-                          className="text-xs text-red-500 hover:text-red-700 font-medium shrink-0">
-                          Withdraw
-                        </button>
+                        <button onClick={() => withdrawQuote(q.id)} className="text-xs text-red-500 hover:text-red-700 font-medium shrink-0">Withdraw</button>
                       )}
                     </div>
                   ))
@@ -753,67 +932,47 @@ export default function ProviderDashboard() {
 
           {/* ── JOBS ── */}
           {tab === 'jobs' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <h1 className="text-xl font-bold text-np-text">Jobs & Schedule</h1>
-
-              {/* Status filter tabs */}
-              {['all', 'scheduled', 'in-progress', 'complete'].map(s => (
-                <span key={s} />
-              ))}
-
-              <div className="space-y-3">
-                {jobs.length === 0
-                  ? <BlankSlate icon="📅" text="No jobs yet." />
-                  : jobs.sort((a, b) => new Date(b.scheduledDate) - new Date(a.scheduledDate)).map(j => (
-                    <div key={j.id} className="bg-white rounded-2xl border border-np-border p-4">
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-np-surface flex items-center justify-center text-xl shrink-0">
-                          {j.serviceType.startsWith('Mow') ? '🌿' : j.serviceType.startsWith('Tree') ? '🌲' : '🏡'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-semibold text-np-text text-sm">{j.serviceType}</p>
-                            {j.isRecurring && (
-                              <span className="text-xs bg-np-surface text-np-mid border border-np-border px-2 py-0.5 rounded-full">
-                                🔁 {j.recurringFrequency}
-                              </span>
-                            )}
-                            <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[j.status]}`}>
-                              {j.status}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-0.5">{j.homeownerName} · {j.address}</p>
-                          <p className="text-xs text-gray-400">{j.scheduledDate} at {j.scheduledTime}</p>
-                          {j.notes && <p className="text-xs text-gray-400 mt-1 italic">{j.notes}</p>}
-                        </div>
-                        {/* Job actions */}
-                        <div className="flex gap-2 shrink-0 flex-wrap justify-end">
-                          {j.status === 'scheduled' && (
-                            <>
-                              <button onClick={() => updateJobStatus(j.id, 'in-progress')}
-                                className="text-xs px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors font-medium">
-                                Start
-                              </button>
-                              <button onClick={() => { setRescheduleJob(j); setNewDate(j.scheduledDate); setNewTime(j.scheduledTime); }}
-                                className="text-xs px-3 py-1.5 bg-gray-50 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors font-medium">
-                                Reschedule
-                              </button>
-                            </>
+              {jobs.length === 0
+                ? <BlankSlate icon="📅" text="No jobs yet." />
+                : jobs.sort((a, b) => new Date(b.scheduledDate) - new Date(a.scheduledDate)).map(j => (
+                  <div key={j.id} className="bg-white rounded-2xl border border-np-border p-4">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-np-surface flex items-center justify-center text-xl shrink-0">
+                        {j.serviceType?.startsWith('Mow') ? '🌿' : j.serviceType?.startsWith('Tree') ? '🌲' : '🏡'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-np-text text-sm">{j.serviceType}</p>
+                          {j.isRecurring && (
+                            <span className="text-xs bg-np-surface text-np-mid border border-np-border px-2 py-0.5 rounded-full">🔁 {j.recurringFrequency}</span>
                           )}
-                          {j.status === 'in-progress' && (
-                            <button onClick={() => updateJobStatus(j.id, 'complete')}
-                              className="text-xs px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors font-medium">
-                              Mark Complete
-                            </button>
-                          )}
+                          <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[j.status]}`}>{j.status}</span>
                         </div>
+                        <p className="text-xs text-gray-500 mt-0.5">{j.homeownerName} · {j.address}</p>
+                        <p className="text-xs text-gray-400">{j.scheduledDate} at {j.scheduledTime}</p>
+                        {j.notes && <p className="text-xs text-gray-400 mt-1 italic">{j.notes}</p>}
+                      </div>
+                      <div className="flex gap-2 shrink-0 flex-wrap justify-end">
+                        {j.status === 'scheduled' && (
+                          <>
+                            <button onClick={() => updateJobStatus(j.id, 'in-progress')}
+                              className="text-xs px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors font-medium">Start</button>
+                            <button onClick={() => { setRescheduleJob(j); setNewDate(j.scheduledDate); setNewTime(j.scheduledTime); }}
+                              className="text-xs px-3 py-1.5 bg-gray-50 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors font-medium">Reschedule</button>
+                          </>
+                        )}
+                        {j.status === 'in-progress' && (
+                          <button onClick={() => updateJobStatus(j.id, 'complete')}
+                            className="text-xs px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors font-medium">Mark Complete</button>
+                        )}
                       </div>
                     </div>
-                  ))
-                }
-              </div>
+                  </div>
+                ))
+              }
 
-              {/* Reschedule modal */}
               {rescheduleJob && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
                   <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
@@ -832,14 +991,8 @@ export default function ProviderDashboard() {
                       </div>
                     </div>
                     <div className="flex gap-3">
-                      <button onClick={doReschedule}
-                        className="flex-1 py-2.5 bg-np-green text-white rounded-lg text-sm font-medium hover:bg-np-mid transition-colors">
-                        Confirm Reschedule
-                      </button>
-                      <button onClick={() => setRescheduleJob(null)}
-                        className="flex-1 py-2.5 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition-colors">
-                        Cancel
-                      </button>
+                      <button onClick={doReschedule} className="flex-1 py-2.5 bg-np-green text-white rounded-lg text-sm font-medium hover:bg-np-mid transition-colors">Confirm</button>
+                      <button onClick={() => setRescheduleJob(null)} className="flex-1 py-2.5 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition-colors">Cancel</button>
                     </div>
                   </div>
                 </div>
@@ -852,8 +1005,6 @@ export default function ProviderDashboard() {
             <div className="h-full">
               <h1 className="text-xl font-bold text-np-text mb-4">Messages</h1>
               <div className="flex gap-4 h-[calc(100vh-14rem)]">
-
-                {/* Thread list */}
                 <div className="w-64 shrink-0 bg-white rounded-2xl border border-np-border overflow-y-auto">
                   {threads.length === 0
                     ? <p className="text-sm text-gray-400 p-5">No conversations yet.</p>
@@ -869,9 +1020,7 @@ export default function ProviderDashboard() {
                             <p className="text-xs text-gray-400 truncate">{t.msgs.at(-1)?.content}</p>
                           </div>
                           {t.unread > 0 && (
-                            <span className="w-5 h-5 rounded-full bg-np-accent text-np-dark text-xs font-bold flex items-center justify-center shrink-0">
-                              {t.unread}
-                            </span>
+                            <span className="w-5 h-5 rounded-full bg-np-accent text-np-dark text-xs font-bold flex items-center justify-center shrink-0">{t.unread}</span>
                           )}
                         </div>
                       </button>
@@ -879,23 +1028,16 @@ export default function ProviderDashboard() {
                   }
                 </div>
 
-                {/* Chat window */}
                 <div className="flex-1 bg-white rounded-2xl border border-np-border flex flex-col overflow-hidden">
                   {!activeThread
                     ? <div className="flex-1 flex items-center justify-center text-gray-300 text-sm">Select a conversation</div>
                     : (
                       <>
-                        <div className="px-5 py-3 border-b border-gray-100 font-semibold text-np-text text-sm">
-                          {activeThreadData?.partnerName}
-                        </div>
+                        <div className="px-5 py-3 border-b border-gray-100 font-semibold text-np-text text-sm">{activeThreadData?.partnerName}</div>
                         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
                           {activeThreadData?.msgs.map(m => (
                             <div key={m.id} className={`flex ${m.fromId === email ? 'justify-end' : 'justify-start'}`}>
-                              <div className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-sm ${
-                                m.fromId === email
-                                  ? 'bg-np-green text-white rounded-br-sm'
-                                  : 'bg-gray-100 text-np-text rounded-bl-sm'
-                              }`}>
+                              <div className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-sm ${m.fromId === email ? 'bg-np-green text-white rounded-br-sm' : 'bg-gray-100 text-np-text rounded-bl-sm'}`}>
                                 <p>{m.content}</p>
                                 <p className={`text-xs mt-1 ${m.fromId === email ? 'text-white/60' : 'text-gray-400'}`}>
                                   {new Date(m.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -909,10 +1051,7 @@ export default function ProviderDashboard() {
                             onKeyDown={e => e.key === 'Enter' && sendMessage()}
                             placeholder="Type a message…"
                             className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-xl outline-none focus:border-np-green focus:ring-2 focus:ring-green-100 transition-all" />
-                          <button onClick={sendMessage}
-                            className="px-4 py-2 bg-np-green text-white rounded-xl text-sm font-medium hover:bg-np-mid transition-colors">
-                            Send
-                          </button>
+                          <button onClick={sendMessage} className="px-4 py-2 bg-np-green text-white rounded-xl text-sm font-medium hover:bg-np-mid transition-colors">Send</button>
                         </div>
                       </>
                     )
@@ -927,7 +1066,6 @@ export default function ProviderDashboard() {
             <div className="max-w-xl space-y-6">
               <h1 className="text-xl font-bold text-np-text">Availability Settings</h1>
 
-              {/* Accepting toggle */}
               <div className="bg-white rounded-2xl border border-np-border p-5 flex items-center justify-between">
                 <div>
                   <p className="font-semibold text-np-text text-sm">Accepting New Quote Requests</p>
@@ -939,30 +1077,28 @@ export default function ProviderDashboard() {
                 </button>
               </div>
 
-              {/* Max jobs */}
               <div className="bg-white rounded-2xl border border-np-border p-5 space-y-4">
                 <p className="font-semibold text-np-text text-sm">Job Limits</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Max Jobs / Day</label>
                     <input type="number" value={avail.maxJobsPerDay} min={1} max={20}
-                      onChange={e => { const u = { ...avail, maxJobsPerDay: parseInt(e.target.value) }; setAvail(u); saveAvailability(email, u); }}
+                      onChange={e => { const u = { ...avail, maxJobsPerDay: parseInt(e.target.value) }; setAvail(u); dbSaveAvailability(email, u); }}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:border-np-green" />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Max Jobs / Week</label>
                     <input type="number" value={avail.maxJobsPerWeek} min={1} max={100}
-                      onChange={e => { const u = { ...avail, maxJobsPerWeek: parseInt(e.target.value) }; setAvail(u); saveAvailability(email, u); }}
+                      onChange={e => { const u = { ...avail, maxJobsPerWeek: parseInt(e.target.value) }; setAvail(u); dbSaveAvailability(email, u); }}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:border-np-green" />
                   </div>
                 </div>
               </div>
 
-              {/* Weekly windows */}
               <div className="bg-white rounded-2xl border border-np-border p-5 space-y-3">
                 <p className="font-semibold text-np-text text-sm mb-1">Weekly Availability</p>
                 {DAYS.map(day => {
-                  const w = avail.weeklyWindows[day];
+                  const w = avail.weeklyWindows?.[day] || { enabled: false, start: '08:00', end: '17:00' };
                   return (
                     <div key={day} className="flex items-center gap-4">
                       <button onClick={() => toggleAvailDay(day)}
@@ -984,18 +1120,14 @@ export default function ProviderDashboard() {
                 })}
               </div>
 
-              {/* Block dates */}
               <div className="bg-white rounded-2xl border border-np-border p-5 space-y-3">
                 <p className="font-semibold text-np-text text-sm">Blocked Dates</p>
                 <div className="flex gap-2">
                   <input type="date" value={blockDate} onChange={e => setBlockDate(e.target.value)}
                     className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:border-np-green" />
-                  <button onClick={addBlockDate}
-                    className="px-4 py-2 bg-np-green text-white rounded-lg text-sm font-medium hover:bg-np-mid transition-colors">
-                    Block
-                  </button>
+                  <button onClick={addBlockDate} className="px-4 py-2 bg-np-green text-white rounded-lg text-sm font-medium hover:bg-np-mid transition-colors">Block</button>
                 </div>
-                {avail.blockedDates.length === 0
+                {(avail.blockedDates || []).length === 0
                   ? <p className="text-xs text-gray-400">No dates blocked.</p>
                   : (
                     <div className="flex flex-wrap gap-2">
@@ -1018,7 +1150,7 @@ export default function ProviderDashboard() {
   );
 }
 
-/* ── tiny helper components ── */
+/* ── helper components ── */
 function StatCard({ label, value, sub, color }) {
   return (
     <div className="bg-white rounded-2xl border border-np-border p-5">
@@ -1028,7 +1160,6 @@ function StatCard({ label, value, sub, color }) {
     </div>
   );
 }
-
 function Metric({ label, value, hint }) {
   return (
     <div>
@@ -1038,7 +1169,6 @@ function Metric({ label, value, hint }) {
     </div>
   );
 }
-
 function PField({ label, type = 'text', value, onChange }) {
   return (
     <div>
@@ -1048,7 +1178,6 @@ function PField({ label, type = 'text', value, onChange }) {
     </div>
   );
 }
-
 function BlankSlate({ icon, text }) {
   return (
     <div className="bg-white rounded-2xl border border-np-border py-12 text-center text-gray-300">

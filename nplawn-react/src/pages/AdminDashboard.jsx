@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { getRegisteredUsers } from '../utils/auth';
 import { supabase } from '../lib/supabase';
 
 function getLeads() {
@@ -51,7 +50,8 @@ export default function AdminDashboard() {
       const localOnlyLeads = localLeads.filter(l => !remoteLeadEmails.has(l.email + new Date(l.submittedAt).toISOString()));
       setLeads([...remoteLeads, ...localOnlyLeads]);
 
-      setUsers(getRegisteredUsers());
+      const { data: profilesData } = await supabase.from('profiles').select('id, email, name, role, created_at');
+      setUsers(profilesData ?? []);
     }
     loadData();
   }, []);

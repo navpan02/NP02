@@ -3,12 +3,6 @@ import heroImg from '../assets/mylawn.jpeg';
 
 const SERVICES = [
   {
-    to: '/mowing',
-    title: 'Lawn Mowing',
-    desc: 'Weekly or bi-weekly cuts, edging, and cleanup. Every visit leaves your lawn looking sharp.',
-    icon: <path d="M3 17h18M3 12h18M3 7h18"/>,
-  },
-  {
     to: '/tree-trimming',
     title: 'Tree Trimming',
     desc: 'Crown shaping, deadwood removal, and hazard pruning by trained arborists.',
@@ -27,12 +21,6 @@ const SERVICES = [
     icon: <path d="M12 22V12M12 12C12 7 7 3 2 4c0 5 4 9 10 8zM12 12c0-5 5-9 10-8-1 5-5 9-10 8z"/>,
   },
   {
-    to: '/aeration-seeding',
-    title: 'Aeration & Seeding',
-    desc: 'Core aeration breaks compaction. Overseeding fills in thin areas. Done together, they transform tired lawns.',
-    icon: <><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></>,
-  },
-  {
     to: '/landscape-design',
     title: 'Landscape Design',
     desc: 'From concept to installation — native plantings, hardscaping, and full-yard transformations.',
@@ -48,9 +36,42 @@ const TESTIMONIALS = [
 
 const STEPS = [
   { n: '1', title: 'Get a Quote',    desc: 'Fill out our quick online form and get a custom quote for your property within 24 hours.' },
-  { n: '2', title: 'Choose a Plan',  desc: 'Pick the service or plan that fits your lawn\'s needs and your budget. No long-term contracts required.' },
+  { n: '2', title: 'Choose a Plan',  desc: "Pick the service or plan that fits your lawn's needs and your budget. No long-term contracts required." },
   { n: '3', title: 'We Handle It',   desc: 'Our certified crew shows up on schedule, does the work, and sends a detailed service report.' },
   { n: '4', title: 'Enjoy the View', desc: 'Watch your lawn thrive season after season while we handle all the work.' },
+];
+
+const WHY_US = [
+  {
+    icon: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></>,
+    title: 'Locally Owned & Operated',
+    desc: 'Based in Naperville since 2017. We know Chicagoland soil, weather, and grass — because we live here too.',
+  },
+  {
+    icon: <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>,
+    title: 'Certified Crew, Every Visit',
+    desc: 'Our technicians are trained, background-checked, and carry full liability insurance — no day laborers.',
+  },
+  {
+    icon: <><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></>,
+    title: 'No Contracts, No Surprises',
+    desc: 'Transparent annual pricing, no hidden fees, and the freedom to cancel before your next season.',
+  },
+  {
+    icon: <path d="M12 22V12M12 12C12 7 7 3 2 4c0 5 4 9 10 8zM12 12c0-5 5-9 10-8-1 5-5 9-10 8z"/>,
+    title: 'Eco-Friendly Options',
+    desc: 'Our GrassNatural program uses 100% organic inputs — safe for kids, pets, and the Midwest ecosystem.',
+  },
+  {
+    icon: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
+    title: 'On-Time, Every Time',
+    desc: 'Automated scheduling with text reminders. You\'ll always know when we\'re coming and what was done.',
+  },
+  {
+    icon: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
+    title: 'Dedicated Account Team',
+    desc: 'A real person knows your property, your preferences, and your history. Not a call center.',
+  },
 ];
 
 export default function Landing() {
@@ -70,7 +91,7 @@ export default function Landing() {
           Every Single Cut.
         </h1>
         <p className="text-white/90 text-lg max-w-[520px] mt-4">
-          Professional lawn care, tree trimming, and landscape design — serving Naperville and surrounding Chicagoland communities.
+          Professional lawn care, tree &amp; shrubs care, lawn maintenance, and landscape design — serving Naperville and surrounding Chicagoland communities.
         </p>
         <div className="flex gap-3.5 flex-wrap mt-9">
           <Link to="/buy-now"
@@ -101,7 +122,7 @@ export default function Landing() {
       {/* SERVICES */}
       <section className="px-[8%] py-20 bg-np-surface">
         <p className="pg-label">What We Do</p>
-        <h2 className="pg-title">Complete Lawn & Landscape Services</h2>
+        <h2 className="pg-title">Complete Lawn &amp; Landscape Services</h2>
         <p className="pg-sub mb-12">Everything your property needs, handled by a team that treats your yard like their own.</p>
         <div className="service-grid">
           {SERVICES.map(s => (
@@ -117,8 +138,54 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
+      {/* VALUE PROPOSITION — Why Choose NPLawn */}
       <section className="px-[8%] py-20 bg-white">
+        <div className="max-w-5xl mx-auto">
+          <p className="pg-label">Why NPLawn</p>
+          <h2 className="pg-title">The Local Difference You Can See</h2>
+          <p className="pg-sub mb-12">
+            National franchises send different crews every week. We build a relationship with your property — and it shows in the results.
+          </p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {WHY_US.map(w => (
+              <div key={w.title} className="flex gap-4 p-5 rounded-2xl border border-np-border hover:border-np-accent/40 hover:shadow-np transition-all">
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-np-surface flex items-center justify-center">
+                  <svg className="w-5 h-5 stroke-np-accent fill-none stroke-[1.8]" viewBox="0 0 24 24">{w.icon}</svg>
+                </div>
+                <div>
+                  <h3 className="font-bold text-np-dark text-sm mb-1">{w.title}</h3>
+                  <p className="text-np-muted text-xs leading-relaxed">{w.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 text-center">
+            <Link to="/about" className="btn-outline px-7 py-3">Meet the Team &rarr;</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* CLEANLAWN PROMO */}
+      <section className="px-[8%] py-14 bg-np-dark text-white">
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+          <div>
+            <p className="text-np-lite text-xs font-bold tracking-[2px] uppercase mb-2">Marketplace</p>
+            <h2 className="text-white text-2xl md:text-3xl font-extrabold mb-2">
+              Need Mowing or Aeration? Try <span className="text-np-lite">CleanLawn</span>.
+            </h2>
+            <p className="text-white/60 max-w-lg">
+              Book on-demand lawn maintenance — mowing and aeration &amp; seeding — through our dedicated marketplace. Local providers, transparent pricing.
+            </p>
+          </div>
+          <Link to="/CleanLawn"
+            className="flex-shrink-0 bg-np-accent text-np-dark font-extrabold px-8 py-3.5 rounded-full no-underline hover:bg-np-lite transition-all whitespace-nowrap">
+            Explore CleanLawn →
+          </Link>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section className="px-[8%] py-20 bg-np-surface">
         <div className="max-w-4xl mx-auto">
           <p className="pg-label">Simple Process</p>
           <h2 className="pg-title">How It Works</h2>
@@ -133,6 +200,11 @@ export default function Landing() {
                 </div>
               </div>
             ))}
+          </div>
+          <div className="mt-10 text-center">
+            <Link to="/how-it-works" className="text-np-accent font-semibold text-sm hover:underline">
+              See the full process &rarr;
+            </Link>
           </div>
         </div>
       </section>

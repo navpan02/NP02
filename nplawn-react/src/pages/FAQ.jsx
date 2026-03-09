@@ -90,6 +90,64 @@ const FAQ_ITEMS = [
       },
     ],
   },
+  {
+    category: 'CleanLawn Marketplace',
+    questions: [
+      {
+        q: 'What is CleanLawn and how is it different from NPLawn?',
+        a: 'CleanLawn is our on-demand marketplace where independent local providers handle one-time lawn services like mowing, aeration, leaf removal, and snow removal. NPLawn\'s core services (annual lawn care plans, tree care, landscape design) are performed by our own certified crew. Many homeowners use both.',
+      },
+      {
+        q: 'How do I book a service through CleanLawn?',
+        a: 'Create a free homeowner account, add your property address, and submit a quote request for the service you need. Local providers in your area will respond with their pricing and availability. You choose who to book.',
+      },
+      {
+        q: 'Who are the providers on CleanLawn?',
+        a: 'CleanLawn providers are vetted, independent lawn care businesses in Chicagoland. They must carry liability insurance, own their equipment, and maintain a quality rating based on customer reviews. They\'re established local businesses — not anonymous gig workers.',
+      },
+      {
+        q: 'Do I need to be home for a CleanLawn service?',
+        a: 'No. Most services are completed while you\'re away. Just make sure gates are unlocked and pets are secured. You\'ll receive a notification when the job is marked complete.',
+      },
+      {
+        q: 'What services are available on CleanLawn?',
+        a: 'Current categories include lawn mowing, aeration & seeding, leaf removal, hedge trimming, mulching, brush clearing, stump grinding, snow removal, sod installation, irrigation, and landscaping design. More services are added as our provider network grows.',
+      },
+      {
+        q: 'How does pricing work on CleanLawn?',
+        a: 'CleanLawn uses a competitive quote model — multiple providers can respond to your request, and you choose based on price, reviews, and availability. Pricing is driven primarily by your lawn\'s square footage and the type of service. You always see the price before confirming.',
+      },
+      {
+        q: 'What if I\'m not happy with the work a provider did?',
+        a: 'Contact us through the platform immediately. We take quality issues seriously and will work with the provider to make it right. Providers who receive consistent negative reviews are removed from the platform.',
+      },
+    ],
+  },
+  {
+    category: 'Providers & Partners',
+    questions: [
+      {
+        q: 'How do I become a CleanLawn provider?',
+        a: 'Visit our Provider page and complete the application. You\'ll create an account, build your business profile (services, service areas, equipment), and go through a brief review process. There\'s no setup fee.',
+      },
+      {
+        q: 'What are the requirements to join as a provider?',
+        a: 'You need general liability insurance ($1M minimum), a valid Illinois business license (or in process), your own equipment, and the ability to service at least one Chicagoland ZIP code. Commitment to professional, on-time service is essential.',
+      },
+      {
+        q: 'Is there a fee to join CleanLawn as a provider?',
+        a: 'There is no upfront setup fee. CleanLawn earns a commission on completed jobs. This means we only make money when you make money — so our incentive is aligned with your success.',
+      },
+      {
+        q: 'How do providers receive and manage job requests?',
+        a: 'Providers receive notifications when a homeowner in their service area submits a request for a service they offer. You can review the job details, submit your quote, and manage all communication through the Provider Dashboard.',
+      },
+      {
+        q: 'Can I set my own schedule as a CleanLawn provider?',
+        a: 'Yes. You accept only the jobs that fit your availability. There are no mandatory hours or minimum job quotas. You control which requests you respond to and what schedule you keep.',
+      },
+    ],
+  },
 ];
 
 function FaqItem({ q, a }) {
@@ -155,6 +213,7 @@ export default function FAQ() {
             <p className="text-white/60 text-sm mb-6">Our team gives honest, no-pressure answers. No sales pitch.</p>
             <div className="flex gap-3 justify-center flex-wrap">
               <Link to="/contact" className="btn-primary px-6 py-2.5">Contact Us</Link>
+              <Link to="/how-it-works" className="btn-outline px-6 py-2.5 border-white/30 text-white hover:bg-white/10">How It Works</Link>
               <Link to="/grass-guide" className="btn-outline px-6 py-2.5 border-white/30 text-white hover:bg-white/10">Grass Type Guide</Link>
             </div>
           </div>
