@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 
 import Layout      from './components/Layout';
 import AdminRoute  from './components/AdminRoute';
+import ScrollToTop from './components/ScrollToTop';
 
 // Pages
 import Landing          from './pages/Landing';
@@ -72,6 +73,8 @@ import CleanLawnMarketplaceGuide    from './pages/blog/CleanLawnMarketplaceGuide
 
 function AppRoutes() {
   return (
+    <>
+    <ScrollToTop />
     <Routes>
       {/* Public routes with layout */}
       <Route path="/"                   element={<Layout><Landing/></Layout>} />
@@ -161,6 +164,7 @@ function AppRoutes() {
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }
 
