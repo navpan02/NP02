@@ -108,7 +108,9 @@ export function sessionToUser(session) {
   return {
     id:    user.id,
     email: user.email,
-    role:  user.user_metadata?.role ?? user.app_metadata?.role ?? 'user',
+    // app_metadata is server-only (set via Supabase admin/service key) — authoritative.
+    // user_metadata is set during signUp by the client; check it only as fallback.
+    role:  user.app_metadata?.role ?? user.user_metadata?.role ?? 'user',
     name:  user.user_metadata?.name  ?? user.email?.split('@')[0] ?? '',
   };
 }
