@@ -38,6 +38,20 @@ const SQFT_OPTIONS = [
   'Over 1 acre',
 ];
 
+function Field({ label, id, required, errors = {}, ...rest }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}{required && ' *'}</label>
+      <input id={id}
+        className={`w-full px-4 py-2.5 text-sm rounded-lg border outline-none transition-all ${
+          errors[id] ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-100'
+        }`}
+        {...rest} />
+      {errors[id] && <p className="mt-1 text-xs text-red-600">{errors[id]}</p>}
+    </div>
+  );
+}
+
 export default function GetQuote() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
@@ -125,18 +139,6 @@ export default function GetQuote() {
 
   const STEP_LABELS = ['Property & Contact', 'Services & Frequency', 'Confirmation'];
 
-  const Field = ({ label, id, required, ...rest }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}{required && ' *'}</label>
-      <input id={id}
-        className={`w-full px-4 py-2.5 text-sm rounded-lg border outline-none transition-all ${
-          fieldErrors[id] ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-100'
-        }`}
-        {...rest} />
-      {fieldErrors[id] && <p className="mt-1 text-xs text-red-600">{fieldErrors[id]}</p>}
-    </div>
-  );
-
   /* ========== STEP 3: CONFIRMATION ========== */
   if (submitted) {
     return (
@@ -201,31 +203,31 @@ export default function GetQuote() {
               <h2 className="text-lg font-bold text-gray-800 mb-1">Your Details</h2>
               <p className="text-sm text-gray-500 mb-4">Tell us who you are and where the property is.</p>
 
-              <Field label="Full Name" id="name" required type="text" value={form.name}
+              <Field label="Full Name" id="name" required type="text" value={form.name} errors={fieldErrors}
                 onChange={e => set('name', e.target.value)}
                 onBlur={e => setFieldErrors(p => ({ ...p, name: validateName(e.target.value) }))}
                 placeholder="Jane Smith" maxLength={50} />
 
               <div className="grid sm:grid-cols-2 gap-4">
-                <Field label="Email" id="email" type="email" value={form.email}
+                <Field label="Email" id="email" type="email" value={form.email} errors={fieldErrors}
                   onChange={e => set('email', e.target.value)}
                   onBlur={e => setFieldErrors(p => ({ ...p, email: validateEmail(e.target.value) }))}
                   placeholder="jane@example.com" />
-                <Field label="Phone" id="phone" type="tel" value={form.phone}
+                <Field label="Phone" id="phone" type="tel" value={form.phone} errors={fieldErrors}
                   onChange={e => set('phone', e.target.value)}
                   onBlur={e => setFieldErrors(p => ({ ...p, phone: validatePhone(e.target.value) }))}
                   placeholder="(630) 555-0100" />
               </div>
 
-              <Field label="Street Address" id="address" required type="text" value={form.address}
+              <Field label="Street Address" id="address" required type="text" value={form.address} errors={fieldErrors}
                 onChange={e => set('address', e.target.value)} placeholder="123 Main St" />
 
               <div className="grid grid-cols-3 gap-3">
-                <Field label="City" id="city" type="text" value={form.city}
+                <Field label="City" id="city" type="text" value={form.city} errors={fieldErrors}
                   onChange={e => set('city', e.target.value)} placeholder="Chicago" />
-                <Field label="State" id="state" type="text" value={form.state}
+                <Field label="State" id="state" type="text" value={form.state} errors={fieldErrors}
                   onChange={e => set('state', e.target.value)} placeholder="IL" />
-                <Field label="ZIP" id="zip" type="text" value={form.zip}
+                <Field label="ZIP" id="zip" type="text" value={form.zip} errors={fieldErrors}
                   onChange={e => set('zip', e.target.value)} placeholder="60601" />
               </div>
             </div>

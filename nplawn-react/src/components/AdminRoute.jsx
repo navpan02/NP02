@@ -13,7 +13,11 @@ export default function AdminRoute({ children }) {
   if (loading) return null; // wait for session hydration
 
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== 'admin') return <Navigate to="/" replace />;
+
+  // Accept role set via Supabase app_metadata OR the known admin email as fallback
+  // (covers accounts created before app_metadata.role was set in the Supabase dashboard).
+  const isAdmin = user.role === 'admin' || user.email === 'admin@admin.com';
+  if (!isAdmin) return <Navigate to="/" replace />;
 
   return children;
 }

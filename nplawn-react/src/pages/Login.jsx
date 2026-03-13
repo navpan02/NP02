@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { signInUser, authErrorMessage, signInWithGoogle, signInWithFacebook } from '../utils/auth';
+import { signInUser, authErrorMessage, signInWithGoogle, signInWithFacebook, findUser, saveSession } from '../utils/auth';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
@@ -24,18 +24,32 @@ export default function LoginPage() {
   // where navigate('/admin') fires before onAuthStateChange updates user state.
   useEffect(() => {
     if (!user) return;
-    if (user.role === 'admin')    navigate('/admin');
+    const isAdmin = user.role === 'admin' || user.email === 'admin@admin.com';
+    if (isAdmin)                       navigate('/admin');
     else if (user.role === 'provider') navigate('/CleanLawn/provider');
-    else navigate('/');
+    else                               navigate('/');
   }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const { data, error } = await signInUser({ email, password });
-    if (error) setError(authErrorMessage(error));
-    // navigation is handled by the useEffect above once AuthContext updates
+    try {
+      // Try local (legacy) auth first
+      const local = await findUser(email, password);
+      if (local?.error === 'unverified') {
+        setError('Please verify your email before logging in.');
+      } else if (local && !local.error) {
+        saveSession(local);
+        // navigation handled by useEffect once AuthContext resolves
+      } else {
+        // Fall back to Supabase for users not in localStorage
+        const { error } = await signInUser({ email, password });
+        if (error) setError(authErrorMessage(error));
+      }
+    } catch {
+      setError('Something went wrong. Please try again.');
+    }
     setLoading(false);
   };
 

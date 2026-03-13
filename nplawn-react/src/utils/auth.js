@@ -5,6 +5,54 @@ import { supabase } from '../lib/supabase';
 // (bcrypt with per-user salt). No plaintext or local hashes are stored.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Legacy / local-auth helpers (kept for backward-compat and test coverage)
+// ---------------------------------------------------------------------------
+
+/** SHA-256 of a string → 64-char lowercase hex. */
+export async function sha256(message) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(message));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Seed accounts that cannot be re-registered. */
+export const RESERVED_EMAILS = ['admin@admin.com', 'navpan@gmail.com'];
+
+export function getRegisteredUsers() {
+  try { return JSON.parse(localStorage.getItem('nplawn_users') || '[]'); }
+  catch { return []; }
+}
+
+export function saveRegisteredUsers(users) {
+  localStorage.setItem('nplawn_users', JSON.stringify(users));
+}
+
+/** Look up a user by email + password in localStorage. */
+export async function findUser(email, password) {
+  const users = getRegisteredUsers();
+  const found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  if (!found) return null;
+  if (!found.verified) return { error: 'unverified' };
+  const hash = await sha256(password);
+  if (hash !== found.hash) return null;
+  return { email: found.email, name: found.name || '', role: found.role || 'user' };
+}
+
+export function getSession() {
+  try { return JSON.parse(sessionStorage.getItem('nplawn_session')); }
+  catch { return null; }
+}
+
+export function saveSession(user) {
+  sessionStorage.setItem('nplawn_session', JSON.stringify(user));
+}
+
+export function clearSession() {
+  sessionStorage.removeItem('nplawn_session');
+}
+
+// ---------------------------------------------------------------------------
+
 /**
  * Register a new user.
  * role: 'user' | 'provider' | 'admin'
@@ -87,7 +135,7 @@ export function authErrorMessage(error) {
   if (!error) return '';
   const msg = error.message?.toLowerCase() ?? '';
   if (msg.includes('invalid login') || msg.includes('invalid credentials'))
-    return 'Incorrect email or password.';
+    return 'Invalid email or password.';
   if (msg.includes('email not confirmed'))
     return 'Please verify your email before signing in.';
   if (msg.includes('user already registered'))
@@ -108,7 +156,9 @@ export function sessionToUser(session) {
   return {
     id:    user.id,
     email: user.email,
-    role:  user.user_metadata?.role ?? user.app_metadata?.role ?? 'user',
+    // app_metadata is server-only (set via Supabase admin/service key) — authoritative.
+    // user_metadata is set during signUp by the client; check it only as fallback.
+    role:  user.app_metadata?.role ?? user.user_metadata?.role ?? 'user',
     name:  user.user_metadata?.name  ?? user.email?.split('@')[0] ?? '',
   };
 }

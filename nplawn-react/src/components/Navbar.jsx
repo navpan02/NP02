@@ -154,6 +154,17 @@ function CleanLawnDropdown() {
               </div>
             ))}
           </div>
+
+          {/* Find Providers link */}
+          <div className="px-5 pb-4 pt-2 border-t border-white/10">
+            <Link to="/discover"
+              className="text-np-lite font-bold text-sm hover:text-white transition-colors flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              Find & Browse Providers
+            </Link>
+          </div>
         </div>
       )}
     </div>
@@ -183,7 +194,7 @@ export default function Navbar() {
       {/* Brand */}
       <Link to="/" className="flex items-center gap-2.5 no-underline">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-np-lite to-np-accent flex items-center justify-center">
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+          <svg className="w-5 h-5 fill-np-dark" viewBox="0 0 24 24">
             <path d="M12 20V10C12 6 9 3 5 4c1 4 4 7 7 7" stroke="#1a2e1a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M12 20V12C12 8 15 5 19 6c-1 4-4 7-7 7" stroke="#1a2e1a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M9 20V14C9 11 7 9 4 9.5c.5 3 2.5 5.5 5 5.5" stroke="#1a2e1a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
@@ -260,6 +271,12 @@ export default function Navbar() {
                           `text-sm font-medium py-1.5 transition-colors ${isActive ? 'text-np-lite' : 'text-white/80 hover:text-np-lite'}`
                         }>
                         CleanLawn Home
+                      </NavLink>
+                      <NavLink to="/discover" onClick={() => setOpen(false)}
+                        className={({ isActive }) =>
+                          `text-sm font-medium py-1.5 transition-colors ${isActive ? 'text-np-lite' : 'text-np-lite/70 hover:text-np-lite'}`
+                        }>
+                        Find &amp; Browse Providers
                       </NavLink>
                       {group.sections.map(section => (
                         <div key={section.label} className="mt-2">

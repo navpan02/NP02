@@ -728,6 +728,7 @@ export default function BuyNow() {
               <button onClick={() => setStep(2)} className="btn-outline px-6 py-2.5">← Back</button>
               <button
                 onClick={() => { setDbError(''); placeOrder(); }}
+                disabled={!name.trim()}
                 className="btn-primary px-10 py-4 text-base font-extrabold shadow-[0_6px_20px_rgba(82,183,136,0.38)]"
               >
                 {dbError ? 'Retry →' : 'Place Order →'}
