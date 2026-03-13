@@ -24,7 +24,7 @@ export default function Contact() {
     if (validators[k]) setFieldErrors(e => ({ ...e, [k]: validators[k](v) }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     const errs = { name: validateName(form.name), email: validateEmail(form.email), phone: validatePhone(form.phone) };
     setFieldErrors(errs);
@@ -33,26 +33,27 @@ export default function Contact() {
       setContactError('Please provide at least an email address or a phone number.');
       return;
     }
-    const lead = { ...form, submitted_at: new Date().toISOString() };
 
-    // Save to Supabase
-    const { error } = await supabase.from('leads').insert([{
-      name:         lead.name,
-      email:        lead.email,
-      phone:        lead.phone,
-      service:      lead.service,
-      message:      lead.message,
-      source:       'contact_form',
-      submitted_at: lead.submitted_at,
-    }]);
-    if (error) console.error('Supabase lead insert error:', error.message);
-
-    // Always keep localStorage copy as fallback
+    // Save to localStorage immediately (synchronous)
     const leads = JSON.parse(localStorage.getItem('nplawn_leads') || '[]');
     leads.push({ ...form, submittedAt: Date.now() });
     localStorage.setItem('nplawn_leads', JSON.stringify(leads));
 
     setSubmitted(true);
+
+    // Fire-and-forget Supabase insert
+    const submitted_at = new Date().toISOString();
+    supabase.from('leads').insert([{
+      name:         form.name,
+      email:        form.email,
+      phone:        form.phone,
+      service:      form.service,
+      message:      form.message,
+      source:       'contact_form',
+      submitted_at,
+    }]).then(({ error }) => {
+      if (error) console.error('Supabase lead insert error:', error.message);
+    }).catch(err => console.error('Supabase lead insert error:', err));
   };
 
   return (
@@ -120,7 +121,7 @@ export default function Contact() {
                     <label className="form-label">Full Name *</label>
                     <input className={`form-input ${fieldErrors.name ? 'border-red-400' : ''}`} type="text" value={form.name}
                       onChange={e => set('name', e.target.value)} onBlur={e => blurField('name', e.target.value)}
-                      placeholder="Jane Smith" maxLength={50} />
+                      placeholder="Jane Smith" maxLength={50} required />
                     {fieldErrors.name && <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p>}
                     <p className="mt-1 text-xs text-np-muted text-right">{form.name.length}/50</p>
                   </div>

@@ -9,6 +9,10 @@ vi.mock('../context/AuthContext', () => ({
 
 vi.mock('../utils/auth', () => ({
   findUser: vi.fn(),
+  signInUser: vi.fn().mockResolvedValue({ data: null, error: null }),
+  authErrorMessage: vi.fn().mockReturnValue(''),
+  signInWithGoogle: vi.fn(),
+  signInWithFacebook: vi.fn(),
 }));
 
 const renderLogin = () =>

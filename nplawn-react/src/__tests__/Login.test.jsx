@@ -10,6 +10,7 @@ vi.mock('../utils/auth', async (importOriginal) => {
   return {
     ...actual,
     findUser: vi.fn(),
+    signInUser: vi.fn().mockResolvedValue({ data: null, error: { message: 'Invalid login credentials' } }),
   };
 });
 

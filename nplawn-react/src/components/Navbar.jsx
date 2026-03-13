@@ -194,7 +194,7 @@ export default function Navbar() {
       {/* Brand */}
       <Link to="/" className="flex items-center gap-2.5 no-underline">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-np-lite to-np-accent flex items-center justify-center">
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+          <svg className="w-5 h-5 fill-np-dark" viewBox="0 0 24 24">
             <path d="M12 20V10C12 6 9 3 5 4c1 4 4 7 7 7" stroke="#1a2e1a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M12 20V12C12 8 15 5 19 6c-1 4-4 7-7 7" stroke="#1a2e1a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M9 20V14C9 11 7 9 4 9.5c.5 3 2.5 5.5 5 5.5" stroke="#1a2e1a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>

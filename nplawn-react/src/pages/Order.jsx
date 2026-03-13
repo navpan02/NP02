@@ -110,17 +110,29 @@ export default function Order() {
       customer_zip: form.zip,
       customer_notes: form.notes || null,
       submitted_at: new Date().toISOString(),
+      submittedAt: Date.now(),
+      customer: {
+        name: form.name,
+        email: form.email || null,
+        phone: form.phone || null,
+        address: form.address,
+        city: form.city,
+        zip: form.zip,
+      },
     };
 
-    if (supabase) {
-      const { error } = await supabase.from('orders').insert(orderData);
-      if (error) console.error('Supabase insert error:', error.message);
-    }
-
+    // Save to localStorage immediately and advance to confirmation
     const orders = JSON.parse(localStorage.getItem('nplawn_orders') || '[]');
     orders.push(orderData);
     localStorage.setItem('nplawn_orders', JSON.stringify(orders));
     setStep(3);
+
+    // Fire-and-forget Supabase insert
+    if (supabase) {
+      supabase.from('orders').insert(orderData)
+        .then(({ error }) => { if (error) console.error('Supabase insert error:', error.message); })
+        .catch(err => console.error('Supabase insert error:', err));
+    }
   };
 
   return (
