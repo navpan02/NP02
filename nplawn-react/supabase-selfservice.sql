@@ -153,267 +153,217 @@ create policy "Allow all on service_plans (demo)" on public.service_plans
 
 -- ============================================================
 -- MOCK DATA
--- navpan+np1@gmail.com  → id: 'a1b2c3d4-0001-0001-0001-000000000001'
--- navpan+np2@gmail.com  → id: 'b2c3d4e5-0002-0002-0002-000000000002'
+-- Looks up navpan+np1@gmail.com and navpan+np2@gmail.com by
+-- email so the correct UUIDs are used even if those users
+-- already existed in the database before this script ran.
 -- Password for both: password123
 -- SHA-256('password123') = ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f
 -- ============================================================
 
--- ── Users (custom public.users table) ─────────────────────
-insert into public.users (id, email, name, role, password_hash)
-values
-  ('a1b2c3d4-0001-0001-0001-000000000001',
-   'navpan+np1@gmail.com', 'Alex Martinez', 'user',
-   'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f'),
-  ('b2c3d4e5-0002-0002-0002-000000000002',
-   'navpan+np2@gmail.com', 'Jordan Lee', 'user',
-   'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f')
-on conflict (email) do update
-  set name = excluded.name,
-      password_hash = excluded.password_hash;
+do $$
+declare
+  np1 uuid;
+  np2 uuid;
+begin
 
+  -- ── Resolve real user IDs ───────────────────────────────
+  -- Update name/password if users exist; insert if they don't.
+  insert into public.users (id, email, name, role, password_hash)
+  values
+    (gen_random_uuid(), 'navpan+np1@gmail.com', 'Alex Martinez', 'user',
+     'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f'),
+    (gen_random_uuid(), 'navpan+np2@gmail.com', 'Jordan Lee', 'user',
+     'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f')
+  on conflict (email) do update
+    set name          = excluded.name,
+        password_hash = excluded.password_hash;
 
--- ── Recurring Schedules ────────────────────────────────────
-insert into public.recurring_schedules
-  (id, homeowner_id, service_type, frequency, day_of_week, time_window, status, next_date)
-values
-  -- Alex (np1)
-  ('rs-0001-0001-0001-000000000001',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'Lawn Mowing', 'weekly', 3, 'morning', 'active', '2025-03-19'),
-  ('rs-0001-0001-0001-000000000002',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'Hedge Trimming', 'monthly', 5, 'afternoon', 'active', '2025-04-04'),
-  -- Jordan (np2)
-  ('rs-0002-0002-0002-000000000001',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   'Lawn Mowing', 'biweekly', 2, 'morning', 'active', '2025-03-18'),
-  ('rs-0002-0002-0002-000000000002',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   'Leaf Removal', 'seasonal', null, 'afternoon', 'paused', null)
-on conflict (id) do nothing;
+  select id into np1 from public.users where email = 'navpan+np1@gmail.com';
+  select id into np2 from public.users where email = 'navpan+np2@gmail.com';
 
+  -- ── Recurring Schedules ──────────────────────────────────
+  insert into public.recurring_schedules
+    (id, homeowner_id, service_type, frequency, day_of_week, time_window, status, next_date)
+  values
+    ('rs-0001-0001-0001-000000000001', np1,
+     'Lawn Mowing', 'weekly', 3, 'morning', 'active', '2025-03-19'),
+    ('rs-0001-0001-0001-000000000002', np1,
+     'Hedge Trimming', 'monthly', 5, 'afternoon', 'active', '2025-04-04'),
+    ('rs-0002-0002-0002-000000000001', np2,
+     'Lawn Mowing', 'biweekly', 2, 'morning', 'active', '2025-03-18'),
+    ('rs-0002-0002-0002-000000000002', np2,
+     'Leaf Removal', 'seasonal', null, 'afternoon', 'paused', null)
+  on conflict (id) do nothing;
 
--- ── Jobs ───────────────────────────────────────────────────
-insert into public.jobs
-  (id, homeowner_id, service_type, scheduled_date, scheduled_time, status, notes, completed_at)
-values
-  -- Alex completed jobs
-  ('job-0001-0001-0001-000000000001',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'Lawn Mowing', '2025-01-15', '9:00 AM', 'completed',
-   'Provider: GreenThumb Lawn Care', '2025-01-15 11:30:00+00'),
-  ('job-0001-0001-0001-000000000002',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'Lawn Aeration & Overseeding', '2025-02-10', '8:00 AM', 'completed',
-   'Provider: GreenThumb Lawn Care', '2025-02-10 12:00:00+00'),
-  -- Alex upcoming
-  ('job-0001-0001-0001-000000000003',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'Hedge Trimming', '2025-03-19', '1:00 PM', 'upcoming',
-   'Provider: GreenThumb Lawn Care', null),
-  ('job-0001-0001-0001-000000000004',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'Lawn Mowing', '2025-03-26', '9:00 AM', 'upcoming',
-   'Provider: GreenThumb Lawn Care', null),
-  -- Jordan completed
-  ('job-0002-0002-0002-000000000001',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   'Leaf Removal', '2025-01-20', '10:00 AM', 'completed',
-   'Provider: ProCut Lawn Services', '2025-01-20 13:30:00+00'),
-  ('job-0002-0002-0002-000000000002',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   'Lawn Mowing', '2025-03-04', '9:30 AM', 'completed',
-   'Provider: ProCut Lawn Services', '2025-03-04 11:00:00+00'),
-  -- Jordan upcoming
-  ('job-0002-0002-0002-000000000003',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   'Lawn Mowing', '2025-03-18', '9:30 AM', 'upcoming',
-   'Provider: ProCut Lawn Services', null)
-on conflict (id) do nothing;
+  -- ── Jobs ────────────────────────────────────────────────
+  insert into public.jobs
+    (id, homeowner_id, service_type, scheduled_date, scheduled_time, status, notes, completed_at)
+  values
+    ('job-0001-0001-0001-000000000001', np1,
+     'Lawn Mowing', '2025-01-15', '9:00 AM', 'completed',
+     'Provider: GreenThumb Lawn Care', '2025-01-15 11:30:00+00'),
+    ('job-0001-0001-0001-000000000002', np1,
+     'Lawn Aeration & Overseeding', '2025-02-10', '8:00 AM', 'completed',
+     'Provider: GreenThumb Lawn Care', '2025-02-10 12:00:00+00'),
+    ('job-0001-0001-0001-000000000003', np1,
+     'Hedge Trimming', '2025-03-19', '1:00 PM', 'upcoming',
+     'Provider: GreenThumb Lawn Care', null),
+    ('job-0001-0001-0001-000000000004', np1,
+     'Lawn Mowing', '2025-03-26', '9:00 AM', 'upcoming',
+     'Provider: GreenThumb Lawn Care', null),
+    ('job-0002-0002-0002-000000000001', np2,
+     'Leaf Removal', '2025-01-20', '10:00 AM', 'completed',
+     'Provider: ProCut Lawn Services', '2025-01-20 13:30:00+00'),
+    ('job-0002-0002-0002-000000000002', np2,
+     'Lawn Mowing', '2025-03-04', '9:30 AM', 'completed',
+     'Provider: ProCut Lawn Services', '2025-03-04 11:00:00+00'),
+    ('job-0002-0002-0002-000000000003', np2,
+     'Lawn Mowing', '2025-03-18', '9:30 AM', 'upcoming',
+     'Provider: ProCut Lawn Services', null)
+  on conflict (id) do nothing;
 
+  -- ── Invoices ─────────────────────────────────────────────
+  insert into public.invoices
+    (id, homeowner_id, invoice_number, service_type, provider_name,
+     service_date, due_date, amount, tax, status, pdf_url)
+  values
+    ('inv-0001-0001-0001-000000000001', np1,
+     'INV-2025-001', 'Lawn Mowing', 'GreenThumb Lawn Care',
+     '2025-01-15', '2025-01-22', 65.00, 5.85, 'paid',
+     '/NP02/docs/invoice-2025-001.pdf'),
+    ('inv-0001-0001-0001-000000000002', np1,
+     'INV-2025-002', 'Lawn Aeration & Overseeding', 'GreenThumb Lawn Care',
+     '2025-02-10', '2025-02-17', 120.00, 10.80, 'paid',
+     '/NP02/docs/invoice-2025-002.pdf'),
+    ('inv-0001-0001-0001-000000000003', np1,
+     'INV-2025-003', 'Hedge Trimming', 'GreenThumb Lawn Care',
+     '2025-03-05', '2025-03-20', 85.00, 7.65, 'unpaid',
+     '/NP02/docs/invoice-2025-003.pdf'),
+    ('inv-0002-0002-0002-000000000001', np2,
+     'INV-2025-004', 'Leaf Removal', 'ProCut Lawn Services',
+     '2025-01-20', '2025-01-27', 95.00, 8.55, 'paid',
+     '/NP02/docs/invoice-2025-004.pdf'),
+    ('inv-0002-0002-0002-000000000002', np2,
+     'INV-2025-005', 'Lawn Mowing (March)', 'ProCut Lawn Services',
+     '2025-03-04', '2025-03-11', 60.00, 5.40, 'overdue',
+     null)
+  on conflict (id) do nothing;
 
--- ── Invoices ───────────────────────────────────────────────
-insert into public.invoices
-  (id, homeowner_id, invoice_number, service_type, provider_name,
-   service_date, due_date, amount, tax, status, pdf_url)
-values
-  -- Alex invoices
-  ('inv-0001-0001-0001-000000000001',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'INV-2025-001', 'Lawn Mowing', 'GreenThumb Lawn Care',
-   '2025-01-15', '2025-01-22', 65.00, 5.85, 'paid',
-   '/NP02/docs/invoice-2025-001.pdf'),
-  ('inv-0001-0001-0001-000000000002',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'INV-2025-002', 'Lawn Aeration & Overseeding', 'GreenThumb Lawn Care',
-   '2025-02-10', '2025-02-17', 120.00, 10.80, 'paid',
-   '/NP02/docs/invoice-2025-002.pdf'),
-  ('inv-0001-0001-0001-000000000003',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'INV-2025-003', 'Hedge Trimming', 'GreenThumb Lawn Care',
-   '2025-03-05', '2025-03-20', 85.00, 7.65, 'unpaid',
-   '/NP02/docs/invoice-2025-003.pdf'),
-  -- Jordan invoices
-  ('inv-0002-0002-0002-000000000001',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   'INV-2025-004', 'Leaf Removal', 'ProCut Lawn Services',
-   '2025-01-20', '2025-01-27', 95.00, 8.55, 'paid',
-   '/NP02/docs/invoice-2025-004.pdf'),
-  ('inv-0002-0002-0002-000000000002',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   'INV-2025-005', 'Lawn Mowing (March)', 'ProCut Lawn Services',
-   '2025-03-04', '2025-03-11', 60.00, 5.40, 'overdue',
-   null)
-on conflict (id) do nothing;
+  -- ── Documents ────────────────────────────────────────────
+  insert into public.documents
+    (id, homeowner_id, title, type, pdf_url)
+  values
+    ('doc-0001-0001-0001-000000000001', np1,
+     '2025 Service Agreement — GreenThumb', 'agreement',
+     '/NP02/docs/service-agreement.pdf'),
+    ('doc-0001-0001-0001-000000000002', np1,
+     'Service Completion Receipt — Mar 5', 'service_receipt',
+     '/NP02/docs/completion-receipt.pdf'),
+    ('doc-0001-0001-0001-000000000003', np1,
+     'Invoice #INV-2025-001', 'invoice',
+     '/NP02/docs/invoice-2025-001.pdf'),
+    ('doc-0002-0002-0002-000000000001', np2,
+     'Invoice #INV-2025-004', 'invoice',
+     '/NP02/docs/invoice-2025-004.pdf'),
+    ('doc-0002-0002-0002-000000000002', np2,
+     'Service Completion Receipt — Jan 20', 'service_receipt',
+     '/NP02/docs/completion-receipt.pdf')
+  on conflict (id) do nothing;
 
+  -- ── Service Feedback ─────────────────────────────────────
+  insert into public.service_feedback
+    (id, homeowner_id, provider_name, service_type, service_date, rating, comment)
+  values
+    ('fb-0001-0001-0001-000000000001', np1,
+     'GreenThumb Lawn Care', 'Lawn Mowing', '2025-01-15', 5,
+     'Excellent work! Arrived on time and left the yard spotless.'),
+    ('fb-0001-0001-0001-000000000002', np1,
+     'GreenThumb Lawn Care', 'Lawn Aeration & Overseeding', '2025-02-10', 4,
+     'Great job with the aeration. Could use a bit more seed coverage on the back corner.'),
+    ('fb-0002-0002-0002-000000000001', np2,
+     'ProCut Lawn Services', 'Leaf Removal', '2025-01-20', 5,
+     'They cleared everything in under 3 hours. Would highly recommend!'),
+    ('fb-0002-0002-0002-000000000002', np2,
+     'ProCut Lawn Services', 'Lawn Mowing', '2025-03-04', 4,
+     'Good clean cut. Edges could be a bit sharper but overall happy.')
+  on conflict (id) do nothing;
 
--- ── Documents ──────────────────────────────────────────────
-insert into public.documents
-  (id, homeowner_id, title, type, pdf_url)
-values
-  -- Alex documents
-  ('doc-0001-0001-0001-000000000001',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   '2025 Service Agreement — GreenThumb', 'agreement',
-   '/NP02/docs/service-agreement.pdf'),
-  ('doc-0001-0001-0001-000000000002',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'Service Completion Receipt — Mar 5', 'service_receipt',
-   '/NP02/docs/completion-receipt.pdf'),
-  ('doc-0001-0001-0001-000000000003',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'Invoice #INV-2025-001', 'invoice',
-   '/NP02/docs/invoice-2025-001.pdf'),
-  -- Jordan documents
-  ('doc-0002-0002-0002-000000000001',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   'Invoice #INV-2025-004', 'invoice',
-   '/NP02/docs/invoice-2025-004.pdf'),
-  ('doc-0002-0002-0002-000000000002',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   'Service Completion Receipt — Jan 20', 'service_receipt',
-   '/NP02/docs/completion-receipt.pdf')
-on conflict (id) do nothing;
+  -- ── Provider Notes ───────────────────────────────────────
+  insert into public.provider_notes
+    (id, homeowner_id, property_nickname, category, content)
+  values
+    ('pn-0001-0001-0001-000000000001', np1,
+     'Main House', 'access',
+     'Side gate code: 4829. Gate is on the left side of the house. Please latch after entering.'),
+    ('pn-0001-0001-0001-000000000002', np1,
+     'Main House', 'pets',
+     'We have a large yellow lab named Max. He is friendly but may bark. Please keep gate closed at all times.'),
+    ('pn-0001-0001-0001-000000000003', np1,
+     'Main House', 'instructions',
+     'Please avoid mowing the flower bed area near the front porch. The raised garden bed is off-limits.'),
+    ('pn-0002-0002-0002-000000000001', np2,
+     'Home', 'access',
+     'Parking on the street is fine. No gate — open yard access. Ring doorbell if you need anything.'),
+    ('pn-0002-0002-0002-000000000002', np2,
+     'Home', 'instructions',
+     'Leave clippings in the green bin on the left of the garage. Do not blow leaves into the neighbors yard.')
+  on conflict (id) do nothing;
 
+  -- ── Notification Preferences ─────────────────────────────
+  insert into public.notification_preferences
+    (homeowner_id,
+     email_upcoming_reminder, email_service_complete, email_invoice_due,
+     email_new_quote, email_weather_delay,
+     sms_upcoming_reminder, sms_service_complete, sms_invoice_due, sms_weather_delay)
+  values
+    (np1, true, true, true, true, true,
+     true, true, false, true),
+    (np2, true, true, false, true, false,
+     false, false, false, true)
+  on conflict (homeowner_id) do update
+    set email_upcoming_reminder = excluded.email_upcoming_reminder,
+        sms_upcoming_reminder   = excluded.sms_upcoming_reminder;
 
--- ── Service Feedback ───────────────────────────────────────
-insert into public.service_feedback
-  (id, homeowner_id, provider_name, service_type, service_date, rating, comment)
-values
-  ('fb-0001-0001-0001-000000000001',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'GreenThumb Lawn Care', 'Lawn Mowing', '2025-01-15', 5,
-   'Excellent work! Arrived on time and left the yard spotless.'),
-  ('fb-0001-0001-0001-000000000002',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'GreenThumb Lawn Care', 'Lawn Aeration & Overseeding', '2025-02-10', 4,
-   'Great job with the aeration. Could use a bit more seed coverage on the back corner.'),
-  ('fb-0002-0002-0002-000000000001',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   'ProCut Lawn Services', 'Leaf Removal', '2025-01-20', 5,
-   'They cleared everything in under 3 hours. Would highly recommend!'),
-  ('fb-0002-0002-0002-000000000002',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   'ProCut Lawn Services', 'Lawn Mowing', '2025-03-04', 4,
-   'Good clean cut. Edges could be a bit sharper but overall happy.')
-on conflict (id) do nothing;
+  -- ── Saved Payment Methods ────────────────────────────────
+  insert into public.saved_payment_methods
+    (id, homeowner_id, card_last4, card_brand, card_exp_month, card_exp_year,
+     is_default, autopay_enabled)
+  values
+    ('pm-0001-0001-0001-000000000001', np1,
+     '4242', 'Visa', 9, 2027, true, true),
+    ('pm-0001-0001-0001-000000000002', np1,
+     '5353', 'Mastercard', 3, 2026, false, false),
+    ('pm-0002-0002-0002-000000000001', np2,
+     '1111', 'Visa', 12, 2028, true, false)
+  on conflict (id) do nothing;
 
+  -- ── Service Plans ────────────────────────────────────────
+  insert into public.service_plans
+    (id, homeowner_id, plan_name, price_per_month, frequency,
+     services_included, status, next_billing_date)
+  values
+    ('sp-0001-0001-0001-000000000001', np1,
+     'Standard', 199.00, 'weekly',
+     ARRAY['Weekly Mowing & Edging','Monthly Hedge Trimming','Seasonal Aeration (2x)'],
+     'active', '2025-04-01'),
+    ('sp-0002-0002-0002-000000000001', np2,
+     'Basic', 99.00, 'biweekly',
+     ARRAY['Bi-Weekly Mowing','Seasonal Leaf Removal (1x)'],
+     'active', '2025-04-01')
+  on conflict (id) do nothing;
 
--- ── Provider Notes ─────────────────────────────────────────
-insert into public.provider_notes
-  (id, homeowner_id, property_nickname, category, content)
-values
-  ('pn-0001-0001-0001-000000000001',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'Main House', 'access',
-   'Side gate code: 4829. Gate is on the left side of the house. Please latch after entering.'),
-  ('pn-0001-0001-0001-000000000002',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'Main House', 'pets',
-   'We have a large yellow lab named Max. He is friendly but may bark. Please keep gate closed at all times.'),
-  ('pn-0001-0001-0001-000000000003',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'Main House', 'instructions',
-   'Please avoid mowing the flower bed area near the front porch. The raised garden bed is off-limits.'),
-  ('pn-0002-0002-0002-000000000001',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   'Home', 'access',
-   'Parking on the street is fine. No gate — open yard access. Ring doorbell if you need anything.'),
-  ('pn-0002-0002-0002-000000000002',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   'Home', 'instructions',
-   'Leave clippings in the green bin on the left of the garage. Do not blow leaves into the neighbors yard.')
-on conflict (id) do nothing;
+  -- ── Referrals ────────────────────────────────────────────
+  insert into public.referrals
+    (id, referrer_id, referral_email, referral_code, status, credit_amount)
+  values
+    ('ref-0001-0001-0001-000000000001', np1,
+     'friend1@example.com', 'ALEX-NP1X', 'credited', 20.00),
+    ('ref-0001-0001-0001-000000000002', np1,
+     'friend2@example.com', 'ALEX-NP1X', 'signed_up', 20.00),
+    ('ref-0001-0001-0001-000000000003', np1,
+     'friend3@example.com', 'ALEX-NP1X', 'pending', 20.00),
+    ('ref-0002-0002-0002-000000000001', np2,
+     'neighbor@example.com', 'JORD-NP2Y', 'credited', 20.00)
+  on conflict (id) do nothing;
 
-
--- ── Notification Preferences ───────────────────────────────
-insert into public.notification_preferences
-  (homeowner_id,
-   email_upcoming_reminder, email_service_complete, email_invoice_due,
-   email_new_quote, email_weather_delay,
-   sms_upcoming_reminder, sms_service_complete, sms_invoice_due, sms_weather_delay)
-values
-  ('a1b2c3d4-0001-0001-0001-000000000001',
-   true, true, true, true, true,
-   true, true, false, true),
-  ('b2c3d4e5-0002-0002-0002-000000000002',
-   true, true, false, true, false,
-   false, false, false, true)
-on conflict (homeowner_id) do update
-  set email_upcoming_reminder = excluded.email_upcoming_reminder,
-      sms_upcoming_reminder   = excluded.sms_upcoming_reminder;
-
-
--- ── Saved Payment Methods ──────────────────────────────────
-insert into public.saved_payment_methods
-  (id, homeowner_id, card_last4, card_brand, card_exp_month, card_exp_year,
-   is_default, autopay_enabled)
-values
-  ('pm-0001-0001-0001-000000000001',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   '4242', 'Visa', 9, 2027, true, true),
-  ('pm-0001-0001-0001-000000000002',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   '5353', 'Mastercard', 3, 2026, false, false),
-  ('pm-0002-0002-0002-000000000001',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   '1111', 'Visa', 12, 2028, true, false)
-on conflict (id) do nothing;
-
-
--- ── Service Plans ──────────────────────────────────────────
-insert into public.service_plans
-  (id, homeowner_id, plan_name, price_per_month, frequency,
-   services_included, status, next_billing_date)
-values
-  ('sp-0001-0001-0001-000000000001',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'Standard', 199.00, 'weekly',
-   ARRAY['Weekly Mowing & Edging','Monthly Hedge Trimming','Seasonal Aeration (2x)'],
-   'active', '2025-04-01'),
-  ('sp-0002-0002-0002-000000000001',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   'Basic', 99.00, 'biweekly',
-   ARRAY['Bi-Weekly Mowing','Seasonal Leaf Removal (1x)'],
-   'active', '2025-04-01')
-on conflict (id) do nothing;
-
-
--- ── Referrals ──────────────────────────────────────────────
-insert into public.referrals
-  (id, referrer_id, referral_email, referral_code, status, credit_amount)
-values
-  ('ref-0001-0001-0001-000000000001',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'friend1@example.com', 'ALEX-NP1X', 'credited', 20.00),
-  ('ref-0001-0001-0001-000000000002',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'friend2@example.com', 'ALEX-NP1X', 'signed_up', 20.00),
-  ('ref-0001-0001-0001-000000000003',
-   'a1b2c3d4-0001-0001-0001-000000000001',
-   'friend3@example.com', 'ALEX-NP1X', 'pending', 20.00),
-  ('ref-0002-0002-0002-000000000001',
-   'b2c3d4e5-0002-0002-0002-000000000002',
-   'neighbor@example.com', 'JORD-NP2Y', 'credited', 20.00)
-on conflict (id) do nothing;
+end $$;
