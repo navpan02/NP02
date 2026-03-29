@@ -9,7 +9,7 @@
 -- ============================================================
 
 
--- ── 1. Invoices ────────────────────────────────────────────
+-- ── 1. Invoices 101────────────────────────────────────────────
 create table if not exists public.invoices (
   id             uuid default gen_random_uuid() primary key,
   homeowner_id   uuid not null,
@@ -152,7 +152,7 @@ create policy "Allow all on service_plans (demo)" on public.service_plans
 
 
 -- ============================================================
--- MOCK DATA
+-- MOCK DATA 101
 -- Looks up navpan+np1@gmail.com and navpan+np2@gmail.com by
 -- email so the correct UUIDs are used even if those users
 -- already existed in the database before this script ran.
