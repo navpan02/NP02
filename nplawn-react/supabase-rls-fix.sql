@@ -14,6 +14,8 @@
 -- ── homeowner_properties ───────────────────────────────────
 alter table public.homeowner_properties enable row level security;
 drop policy if exists "Owner manages own properties" on public.homeowner_properties;
+drop policy if exists "Owner manages own properties" on public.homeowner_properties;
+
 create policy "Allow all on homeowner_properties" on public.homeowner_properties
   for all using (true) with check (true);
 
