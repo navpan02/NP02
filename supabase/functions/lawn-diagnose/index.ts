@@ -75,11 +75,13 @@ Return this exact shape:
   "recommended_plan": "GrassBasic|GrassPro|GrassNatural|null"
 }
 
-Plan selection guide:
-- "GrassBasic": standard fertilization + weed control is the primary need (yellowing, thin growth, mild weeds)
-- "GrassPro": intensive care needed — disease, insects, grubs, multiple issues, heavy aeration + overseeding required
-- "GrassNatural": user mentions organic, kids, pets, eco-friendly, or wants to avoid chemicals
-- null: cannot determine from symptoms alone; recommend a professional visit
+Plan selection — choose the MOST appropriate based on severity and user intent:
+- "GrassBasic": lawn is in good or healthy condition and only preventive/maintenance care is needed; OR a single mild issue (light weeds, slight discoloration, thin patches in one area); primary need is seasonal fertilization, pre-emergent, or basic weed control; NO active disease, infestation, or structural damage.
+- "GrassPro": diagnosable active condition requiring targeted treatment — fungal or bacterial disease, insect infestation, grub damage, significant bare/dead areas needing aeration + overseeding, or multiple simultaneous issues that will worsen without prompt intervention.
+- "GrassNatural": user explicitly mentions organic, eco-friendly, chemical-free preference, or safety concern about kids/pets — prioritise this whenever the user signals an organic preference, regardless of severity.
+- null: symptoms are too vague to determine a plan (no description and no usable photo), image quality is too poor to assess, or the condition is outside standard lawn care scope.
+
+Key rule: a lawn described as healthy, good, or low-maintenance should return "GrassBasic" — not null and not GrassPro.
 
 Confidence rules:
 - "low": symptoms are vague or ambiguous, image quality is poor, or condition is outside common lawn pathology — do not guess
