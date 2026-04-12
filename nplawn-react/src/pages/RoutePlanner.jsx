@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../lib/supabase';
 import ConstraintPanel, { DEFAULT_CONSTRAINTS } from '../components/ConstraintPanel';
@@ -114,7 +114,7 @@ export default function RoutePlanner() {
   const fileRef = useRef();
 
   // Load agents from DB on mount
-  useState(() => {
+  useEffect(() => {
     supabase
       .from('agents')
       .select('id, name, email, start_address, start_lat, start_lng')
@@ -126,7 +126,7 @@ export default function RoutePlanner() {
           setSelectedAgentIds(new Set(data.map(a => a.id)));
         }
       });
-  });
+  }, []);
 
   // ── CSV upload ──────────────────────────────────────────────────────────────
 
@@ -247,8 +247,16 @@ export default function RoutePlanner() {
       }).eq('id', plan.id);
 
     } catch (e) {
-      setStatus('error');
-      setErrorMsg(e.message);
+      // Give a human-readable diagnosis for common failures
+      let msg = e.message ?? 'Unknown error';
+      if (msg === 'Failed to fetch' || msg.includes('NetworkError') || msg.includes('fetch')) {
+        msg =
+          'Network error: could not reach the route-optimize edge function. ' +
+          'Make sure the function is deployed in Supabase (Dashboard → Edge Functions → route-optimize) ' +
+          'and that your browser is online.';
+      }
+      setStatus('idle'); // keep form interactive so user can fix and retry
+      setErrorMsg(msg);
       setProgress('');
     }
   };
@@ -380,7 +388,20 @@ export default function RoutePlanner() {
 
           {/* Generate button */}
           <div className="rp-generate-row">
-            {errorMsg && <p className="rp-error-msg">{errorMsg}</p>}
+            {errorMsg && (
+              <div className="rp-error-banner" role="alert">
+                <strong>Error</strong>
+                <p>{errorMsg}</p>
+                <button
+                  type="button"
+                  className="rp-error-dismiss"
+                  onClick={() => setErrorMsg('')}
+                  aria-label="Dismiss error"
+                >
+                  ×
+                </button>
+              </div>
+            )}
             <button
               type="button"
               className="btn btn-primary btn-lg"
@@ -462,18 +483,6 @@ export default function RoutePlanner() {
         </div>
       )}
 
-      {status === 'error' && (
-        <div className="rp-error-block">
-          <p>{errorMsg}</p>
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={() => { setStatus('idle'); setErrorMsg(''); }}
-          >
-            Try Again
-          </button>
-        </div>
-      )}
     </div>
   );
 }
