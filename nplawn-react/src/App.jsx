@@ -28,6 +28,8 @@ import LawnDiagnosis    from './pages/LawnDiagnosis';
 import ProviderLanding    from './pages/ProviderLanding';
 import ServiceDiscovery  from './pages/ServiceDiscovery';
 import ProviderProfile   from './pages/ProviderProfile';
+import RoutePlanner      from './pages/RoutePlanner';
+import RouteView         from './pages/RouteView';
 
 // Service pages — NPLawn core
 import Mowing           from './pages/services/Mowing';
@@ -180,6 +182,12 @@ function AppRoutes() {
       {/* Provider portal — full screen, now under /CleanLawn */}
       <Route path="/CleanLawn/provider"         element={<ProviderDashboard/>} />
       <Route path="/CleanLawn/provider/signup"  element={<ProviderSignup/>} />
+
+      {/* Route Planner — admin only */}
+      <Route path="/route-planner" element={<AdminRoute><Layout><RoutePlanner/></Layout></AdminRoute>} />
+
+      {/* Agent route view — public, no login required */}
+      <Route path="/route-view/:token" element={<Layout noFooter><RouteView/></Layout>} />
 
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
