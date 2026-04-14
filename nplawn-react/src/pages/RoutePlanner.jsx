@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import Papa from 'papaparse';
 import { supabase } from '../lib/supabase';
 import ConstraintPanel, { DEFAULT_CONSTRAINTS } from '../components/ConstraintPanel';
 import RouteListView from '../components/RouteListView';
+import FilterBar from '../components/FilterBar';
 import { exportAllCSV } from '../utils/routeExport';
 
 // Lazy-load map to avoid SSR/bundle issues with Leaflet
@@ -118,6 +119,11 @@ export default function RoutePlanner() {
   const [result, setResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [activeTab, setActiveTab] = useState('map'); // map | list
+
+  // ── Filter state (initialised when result arrives) ───────────────────────────
+  const [filterAgentIds, setFilterAgentIds] = useState(null);
+  const [filterTypes, setFilterTypes] = useState(null);
+
   const fileRef = useRef();
 
   // Load agents from DB on mount
@@ -134,6 +140,53 @@ export default function RoutePlanner() {
         }
       });
   }, []);
+
+  // ── All unique address types in the current result ────────────────────────────
+  const allResultTypes = useMemo(() => {
+    const types = new Set();
+    if (!result) return types;
+    result.routes.forEach(r =>
+      r.stop_sequence?.forEach(s => { if (s.address_type) types.add(s.address_type); })
+    );
+    result.unassigned?.forEach(s => { if (s.address_type) types.add(s.address_type); });
+    return types;
+  }, [result]);
+
+  // Initialise (or reset) filters whenever a new result arrives
+  useEffect(() => {
+    if (!result) { setFilterAgentIds(null); setFilterTypes(null); return; }
+    setFilterAgentIds(new Set(result.routes.map(r => r.agent_id)));
+    const types = new Set();
+    result.routes.forEach(r =>
+      r.stop_sequence?.forEach(s => { if (s.address_type) types.add(s.address_type); })
+    );
+    result.unassigned?.forEach(s => { if (s.address_type) types.add(s.address_type); });
+    setFilterTypes(types);
+  }, [result]);
+
+  // Derived filtered result — passed to map + list views
+  const filteredResult = useMemo(() => {
+    if (!result || !filterAgentIds || !filterTypes) return result;
+    return {
+      ...result,
+      routes: result.routes
+        .filter(r => filterAgentIds.has(r.agent_id))
+        .map(r => ({
+          ...r,
+          clusters: r.clusters
+            .map(c => ({ ...c, stops: c.stops.filter(s => filterTypes.has(s.address_type)) }))
+            .filter(c => c.stops.length > 0),
+          stop_sequence: r.stop_sequence?.filter(s => filterTypes.has(s.address_type)) ?? [],
+        })),
+      unassigned: result.unassigned?.filter(s => filterTypes.has(s.address_type)) ?? [],
+    };
+  }, [result, filterAgentIds, filterTypes]);
+
+  const handleClearFilters = useCallback(() => {
+    if (!result) return;
+    setFilterAgentIds(new Set(result.routes.map(r => r.agent_id)));
+    setFilterTypes(new Set(allResultTypes));
+  }, [result, allResultTypes]);
 
   // ── CSV upload ──────────────────────────────────────────────────────────────
 
@@ -548,6 +601,20 @@ export default function RoutePlanner() {
 
           {/* Tab bar + content */}
           <div className="px-[5%] max-w-7xl mx-auto py-6">
+
+            {/* Filter bar */}
+            {filterAgentIds && filterTypes && (
+              <FilterBar
+                result={result}
+                allTypes={allResultTypes}
+                filterAgentIds={filterAgentIds}
+                filterTypes={filterTypes}
+                onAgentChange={setFilterAgentIds}
+                onTypeChange={setFilterTypes}
+                onClear={handleClearFilters}
+              />
+            )}
+
             <div className="flex items-center gap-4 mb-6">
               <div className="flex gap-1 bg-white rounded-xl border border-np-border p-1">
                 {[
@@ -589,13 +656,13 @@ export default function RoutePlanner() {
                 </div>
               }>
                 <div className="rounded-2xl overflow-hidden border border-np-border shadow-np">
-                  <RouteMap routes={result.routes} unassigned={result.unassigned} />
+                  <RouteMap routes={filteredResult.routes} unassigned={filteredResult.unassigned} />
                 </div>
               </Suspense>
             )}
 
             {activeTab === 'list' && (
-              <RouteListView result={result} planDate={planDate} />
+              <RouteListView result={filteredResult} planDate={planDate} />
             )}
           </div>
         </div>
