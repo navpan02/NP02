@@ -65,14 +65,16 @@ export default function ConstraintPanel({ constraints, onChange }) {
   const handleDragEnd = () => { dragSrc.current = null; };
 
   return (
-    <div className="constraint-panel">
+    <div className="space-y-6">
       {/* Max stops */}
-      <div className="constraint-row">
-        <label className="constraint-label">
-          Max stops / agent
-          <span className="constraint-value">{constraints.max_stops}</span>
-        </label>
-        <div className="constraint-slider-group">
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-semibold text-np-text">Max stops / agent</label>
+          <span className="text-np-accent font-bold text-sm bg-np-accent/10 px-3 py-0.5 rounded-full">
+            {constraints.max_stops}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
           <input
             type="range"
             min={10}
@@ -80,7 +82,7 @@ export default function ConstraintPanel({ constraints, onChange }) {
             step={5}
             value={constraints.max_stops}
             onChange={e => update('max_stops', Number(e.target.value))}
-            className="constraint-slider"
+            className="flex-1 h-2 rounded-full accent-np-accent cursor-pointer"
           />
           <input
             type="number"
@@ -88,18 +90,20 @@ export default function ConstraintPanel({ constraints, onChange }) {
             max={200}
             value={constraints.max_stops}
             onChange={e => update('max_stops', Number(e.target.value))}
-            className="constraint-number"
+            className="w-20 text-sm border border-np-border rounded-lg px-2 py-1.5 text-center focus:outline-none focus:ring-2 focus:ring-np-accent/30 focus:border-np-accent"
           />
         </div>
       </div>
 
       {/* Max miles */}
-      <div className="constraint-row">
-        <label className="constraint-label">
-          Max miles / agent
-          <span className="constraint-value">{constraints.max_miles}</span>
-        </label>
-        <div className="constraint-slider-group">
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-semibold text-np-text">Max miles / agent</label>
+          <span className="text-np-accent font-bold text-sm bg-np-accent/10 px-3 py-0.5 rounded-full">
+            {constraints.max_miles} mi
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
           <input
             type="range"
             min={5}
@@ -107,7 +111,7 @@ export default function ConstraintPanel({ constraints, onChange }) {
             step={1}
             value={constraints.max_miles}
             onChange={e => update('max_miles', Number(e.target.value))}
-            className="constraint-slider"
+            className="flex-1 h-2 rounded-full accent-np-accent cursor-pointer"
           />
           <input
             type="number"
@@ -115,18 +119,20 @@ export default function ConstraintPanel({ constraints, onChange }) {
             max={100}
             value={constraints.max_miles}
             onChange={e => update('max_miles', Number(e.target.value))}
-            className="constraint-number"
+            className="w-20 text-sm border border-np-border rounded-lg px-2 py-1.5 text-center focus:outline-none focus:ring-2 focus:ring-np-accent/30 focus:border-np-accent"
           />
         </div>
       </div>
 
       {/* Cluster radius */}
-      <div className="constraint-row">
-        <label className="constraint-label">
-          Cluster radius (m)
-          <span className="constraint-value">{constraints.cluster_radius_m}</span>
-        </label>
-        <div className="constraint-slider-group">
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-semibold text-np-text">Cluster radius</label>
+          <span className="text-np-accent font-bold text-sm bg-np-accent/10 px-3 py-0.5 rounded-full">
+            {constraints.cluster_radius_m} m
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
           <input
             type="range"
             min={100}
@@ -134,7 +140,7 @@ export default function ConstraintPanel({ constraints, onChange }) {
             step={50}
             value={constraints.cluster_radius_m}
             onChange={e => update('cluster_radius_m', Number(e.target.value))}
-            className="constraint-slider"
+            className="flex-1 h-2 rounded-full accent-np-accent cursor-pointer"
           />
           <input
             type="number"
@@ -142,22 +148,25 @@ export default function ConstraintPanel({ constraints, onChange }) {
             max={1000}
             value={constraints.cluster_radius_m}
             onChange={e => update('cluster_radius_m', Number(e.target.value))}
-            className="constraint-number"
+            className="w-20 text-sm border border-np-border rounded-lg px-2 py-1.5 text-center focus:outline-none focus:ring-2 focus:ring-np-accent/30 focus:border-np-accent"
           />
         </div>
       </div>
 
       {/* Excluded ZIPs */}
-      <div className="constraint-row constraint-row--column">
-        <label className="constraint-label">Exclude ZIP codes</label>
-        <div className="zip-chip-area">
+      <div>
+        <label className="text-sm font-semibold text-np-text block mb-2">Exclude ZIP codes</label>
+        <div className="min-h-[44px] flex flex-wrap gap-2 p-3 bg-np-surface rounded-xl border border-np-border focus-within:border-np-accent focus-within:ring-2 focus-within:ring-np-accent/20 transition-all">
           {constraints.excluded_zips.map(z => (
-            <span key={z} className="zip-chip">
+            <span
+              key={z}
+              className="inline-flex items-center gap-1 bg-np-dark text-white text-xs font-semibold px-2.5 py-1 rounded-full"
+            >
               {z}
               <button
                 type="button"
                 onClick={() => removeZip(z)}
-                className="zip-chip-remove"
+                className="ml-0.5 hover:text-red-300 transition-colors leading-none"
                 aria-label={`Remove ${z}`}
               >
                 ×
@@ -166,24 +175,22 @@ export default function ConstraintPanel({ constraints, onChange }) {
           ))}
           <input
             type="text"
-            placeholder="Enter 5-digit ZIP…"
+            placeholder={constraints.excluded_zips.length === 0 ? 'Type a 5-digit ZIP and press Enter…' : 'Add another ZIP…'}
             value={zipInput}
             onChange={e => setZipInput(e.target.value)}
             onKeyDown={handleZipKey}
             onBlur={addZip}
             maxLength={5}
-            className="zip-chip-input"
+            className="flex-1 min-w-[180px] bg-transparent text-sm text-np-text placeholder:text-np-muted focus:outline-none"
           />
         </div>
       </div>
 
       {/* Address type priority */}
-      <div className="constraint-row constraint-row--column">
-        <label className="constraint-label">
-          Address type priority
-          <span className="constraint-hint">(drag to reorder — top = highest priority)</span>
-        </label>
-        <ul className="priority-list">
+      <div>
+        <label className="text-sm font-semibold text-np-text block mb-1">Address type priority</label>
+        <p className="text-xs text-np-muted mb-3">Drag to reorder — top row = highest priority</p>
+        <ul className="space-y-2">
           {constraints.priority_order.map((type, idx) => (
             <li
               key={type}
@@ -191,11 +198,13 @@ export default function ConstraintPanel({ constraints, onChange }) {
               onDragStart={e => handleDragStart(e, idx)}
               onDragOver={e => handleDragOver(e, idx)}
               onDragEnd={handleDragEnd}
-              className="priority-item"
+              className="flex items-center gap-3 bg-white border border-np-border rounded-xl px-4 py-2.5 cursor-grab active:cursor-grabbing hover:border-np-accent/50 hover:shadow-np transition-all select-none"
             >
-              <span className="priority-handle">⠿</span>
-              <span className="priority-rank">{idx + 1}</span>
-              <span className="priority-type">{type.replace(/_/g, ' ')}</span>
+              <span className="text-np-muted/50 text-lg leading-none">⠿</span>
+              <span className="w-5 h-5 rounded-full bg-np-accent/10 text-np-accent text-xs font-bold flex items-center justify-center flex-shrink-0">
+                {idx + 1}
+              </span>
+              <span className="text-sm font-medium text-np-text capitalize">{type.replace(/_/g, ' ')}</span>
             </li>
           ))}
         </ul>
