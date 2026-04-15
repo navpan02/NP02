@@ -33,6 +33,7 @@ interface Constraints {
   priority_order: string[];
   cluster_radius_m: number;
   min_cluster_size: number;
+  clustering_algorithm: 'dbscan' | 'dbscan_2opt' | 'hdbscan' | 'voronoi';
 }
 
 interface Stop {
@@ -262,6 +263,84 @@ function dbscan(
   return labels;
 }
 
+// ─── UnionFind (for HDBSCAN) ──────────────────────────────────────────────────
+
+class UnionFind {
+  private parent: number[];
+  private rank: number[];
+  constructor(n: number) {
+    this.parent = Array.from({ length: n }, (_, i) => i);
+    this.rank = new Array(n).fill(0);
+  }
+  find(x: number): number {
+    if (this.parent[x] !== x) this.parent[x] = this.find(this.parent[x]);
+    return this.parent[x];
+  }
+  union(x: number, y: number): boolean {
+    const px = this.find(x), py = this.find(y);
+    if (px === py) return false;
+    if (this.rank[px] < this.rank[py]) { this.parent[px] = py; }
+    else if (this.rank[px] > this.rank[py]) { this.parent[py] = px; }
+    else { this.parent[py] = px; this.rank[px]++; }
+    return true;
+  }
+}
+
+// ─── Build Cluster[] from index→label map ─────────────────────────────────────
+
+function buildClustersFromLabels(
+  points: Stop[],
+  labels: Map<number, string>,
+  unassignedOut: Stop[],
+): Cluster[] {
+  const clusterMap = new Map<string, Stop[]>();
+  for (const [i, cid] of labels.entries()) {
+    if (cid === 'noise') { unassignedOut.push(points[i]); continue; }
+    if (!clusterMap.has(cid)) clusterMap.set(cid, []);
+    clusterMap.get(cid)!.push(points[i]);
+  }
+  const clusters: Cluster[] = [];
+  for (const [cid, stops] of clusterMap.entries()) {
+    const center = clusterCenter(stops);
+    const priority_score = stops.reduce((s, p) => s + p.priority_score, 0);
+    clusters.push({ id: cid, center, size: stops.length, stops, priority_score });
+  }
+  clusters.sort((a, b) => b.priority_score - a.priority_score);
+  return clusters;
+}
+
+// ─── 2-opt walk-path improvement ─────────────────────────────────────────────
+
+function twoOpt(stops: Stop[]): Stop[] {
+  if (stops.length <= 3) return stops;
+  let best = [...stops];
+  let improved = true;
+  while (improved) {
+    improved = false;
+    for (let i = 0; i < best.length - 1; i++) {
+      for (let j = i + 2; j < best.length; j++) {
+        // Cost before: i→i+1 and j→j+1
+        const d1 = haversineKm(best[i].lat, best[i].lng, best[i + 1].lat, best[i + 1].lng) +
+          (j + 1 < best.length
+            ? haversineKm(best[j].lat, best[j].lng, best[j + 1].lat, best[j + 1].lng)
+            : 0);
+        // Cost after: i→j and i+1→j+1 (reverse segment i+1..j)
+        const d2 = haversineKm(best[i].lat, best[i].lng, best[j].lat, best[j].lng) +
+          (j + 1 < best.length
+            ? haversineKm(best[i + 1].lat, best[i + 1].lng, best[j + 1].lat, best[j + 1].lng)
+            : 0);
+        if (d2 < d1 - 1e-9) {
+          // Reverse the segment from i+1 to j
+          const seg = best.slice(i + 1, j + 1).reverse();
+          best = [...best.slice(0, i + 1), ...seg, ...best.slice(j + 1)];
+          improved = true;
+        }
+      }
+    }
+  }
+  return best;
+}
+
 // ─── Nearest-neighbour TSP ────────────────────────────────────────────────────
 
 function nearestNeighbourTSP(
@@ -378,6 +457,7 @@ Deno.serve(async (req: Request) => {
       ],
       cluster_radius_m: rawConstraints?.cluster_radius_m ?? 400,
       min_cluster_size: rawConstraints?.min_cluster_size ?? 5,
+      clustering_algorithm: rawConstraints?.clustering_algorithm ?? 'dbscan',
     };
 
     const supabase = createClient(
