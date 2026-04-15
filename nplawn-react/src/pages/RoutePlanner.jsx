@@ -904,6 +904,7 @@ export default function RoutePlanner() {
                       routes={filteredResult.routes}
                       unassigned={filteredResult.unassigned}
                       colourMode={colourMode}
+                      selectedUnassignedId={selectedUnassigned?.unique_id ?? null}
                       onUnassignedClick={(stop) => {
                         setSelectedUnassigned(stop);
                         setShowUnassignedPanel(true);
