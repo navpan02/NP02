@@ -672,34 +672,12 @@ Deno.serve(async (req: Request) => {
       valid.push({ ...addr, lat: geo.lat, lng: geo.lng, priority_score });
     }
 
-    // ── Phase 2: DBSCAN clustering ──────────────────────────────────────────
+    // ── Phase 2: Clustering (algorithm dispatch) ─────────────────────────────
 
     const epsKm = constraints.cluster_radius_m / 1000;
-    const labelMap = dbscan(valid, epsKm, constraints.min_cluster_size);
+    const algo = constraints.clustering_algorithm;
 
-    const clusterMap = new Map<string, Stop[]>();
-    for (const [i, cid] of labelMap.entries()) {
-      if (cid === 'noise') {
-        unassigned.push(valid[i]);
-        continue;
-      }
-      if (!clusterMap.has(cid)) clusterMap.set(cid, []);
-      clusterMap.get(cid)!.push(valid[i]);
-    }
-
-    const clusters: Cluster[] = [];
-    for (const [cid, stops] of clusterMap.entries()) {
-      const center = clusterCenter(stops);
-      const priority_score = stops.reduce((s, p) => s + p.priority_score, 0);
-      clusters.push({ id: cid, center, size: stops.length, stops, priority_score });
-    }
-
-    // Sort clusters by total priority descending
-    clusters.sort((a, b) => b.priority_score - a.priority_score);
-
-    // ── Phase 3: Agent assignment ────────────────────────────────────────────
-
-    // Geocode agent start positions if needed
+    // Agent start positions — computed here (before Phase 2) so Voronoi can use them
     const agentStops: { agentIdx: number; lat: number; lng: number }[] = [];
     for (let i = 0; i < agents.length; i++) {
       const ag: Agent = agents[i];
@@ -709,11 +687,28 @@ Deno.serve(async (req: Request) => {
       ) {
         agentStops.push({ agentIdx: i, lat: ag.start_lat, lng: ag.start_lng });
       } else {
-        // Default to geographic centroid of all valid stops
         const centroid = clusterCenter(valid.length > 0 ? valid : [{ lat: 41.88, lng: -87.63, address: '', city: '', state: '', zip: '', address_type: '', unique_id: '', priority_score: 0 }]);
         agentStops.push({ agentIdx: i, lat: centroid.lat, lng: centroid.lng });
       }
     }
+
+    let clusters: Cluster[];
+    let voronoiPreassign: Map<string, number> | null = null;
+
+    if (algo === 'hdbscan') {
+      const labelMap = hdbscan(valid, constraints.min_cluster_size);
+      clusters = buildClustersFromLabels(valid, labelMap, unassigned);
+    } else if (algo === 'voronoi') {
+      const { labels, agentPreassignment } = voronoiCluster(valid, agentStops, epsKm, constraints.min_cluster_size);
+      clusters = buildClustersFromLabels(valid, labels, unassigned);
+      voronoiPreassign = agentPreassignment;
+    } else {
+      // 'dbscan' and 'dbscan_2opt' — same clustering, 2-opt applied later in Phase 4
+      const labelMap = dbscan(valid, epsKm, constraints.min_cluster_size);
+      clusters = buildClustersFromLabels(valid, labelMap, unassigned);
+    }
+
+    // ── Phase 3: Agent assignment ────────────────────────────────────────────
 
     const agentRunning = agents.map((ag: Agent, i: number) => ({
       agent: ag,
@@ -727,6 +722,28 @@ Deno.serve(async (req: Request) => {
 
     for (const cluster of clusters) {
       const walkMi = walkMilesInCluster(cluster.stops);
+
+      // Voronoi: honour territory pre-assignment when capacity allows
+      if (voronoiPreassign !== null) {
+        const preferredIdx = voronoiPreassign.get(cluster.id) ?? -1;
+        if (preferredIdx >= 0) {
+          const ag = agentRunning[preferredIdx];
+          const driveKm = haversineKm(ag.curLat, ag.curLng, cluster.center.lat, cluster.center.lng);
+          const newStops = ag.stops + cluster.stops.length;
+          const newMiles = ag.miles + driveKm * 0.621371 + walkMi;
+          if (newStops <= constraints.max_stops && newMiles <= constraints.max_miles) {
+            ag.miles += driveKm * 0.621371 + walkMi;
+            ag.stops += cluster.stops.length;
+            ag.assignedClusters.push(cluster);
+            ag.curLat = cluster.center.lat;
+            ag.curLng = cluster.center.lng;
+            continue;
+          }
+          // Territory agent over capacity — fall through to round-robin
+        }
+      }
+
+      // Round-robin balanced assignment (all algorithms + Voronoi overflow)
       let bestAgent = -1;
       let bestScore = Infinity;
 
@@ -738,7 +755,6 @@ Deno.serve(async (req: Request) => {
         const newMiles = ag.miles + driveMi + walkMi;
 
         if (newStops <= constraints.max_stops && newMiles <= constraints.max_miles) {
-          // Prefer agent with fewest stops (load balancing)
           if (ag.stops < bestScore) {
             bestScore = ag.stops;
             bestAgent = a;
@@ -786,13 +802,16 @@ Deno.serve(async (req: Request) => {
           sortedByPriority[0].lat,
           sortedByPriority[0].lng,
         );
-        const orderedStops = walkOrder.map(i => ({
-          ...sortedByPriority[i],
+        let orderedStops = walkOrder.map(i => sortedByPriority[i]);
+        // Apply 2-opt improvement for dbscan_2opt algorithm
+        if (algo === 'dbscan_2opt') orderedStops = twoOpt(orderedStops);
+        const numberedStops = orderedStops.map(s => ({
+          ...s,
           cluster_id: cluster.id,
           stop_order: stopOrder++,
         }));
-        stopSequence.push(...orderedStops);
-        return { ...cluster, stops: orderedStops };
+        stopSequence.push(...numberedStops);
+        return { ...cluster, stops: numberedStops };
       });
 
       const assignmentId = randomUUID();
