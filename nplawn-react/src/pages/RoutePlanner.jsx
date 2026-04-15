@@ -828,15 +828,26 @@ export default function RoutePlanner() {
             </div>
 
             {activeTab === 'map' && (
-              <Suspense fallback={
-                <div className="bg-white rounded-2xl border border-np-border flex items-center justify-center h-[500px] text-np-muted">
-                  Loading map…
-                </div>
-              }>
-                <div className="rounded-2xl overflow-hidden border border-np-border shadow-np">
-                  <RouteMap routes={filteredResult.routes} unassigned={filteredResult.unassigned} colourMode={colourMode} />
-                </div>
-              </Suspense>
+              <div className="flex gap-4 items-start">
+                <Suspense fallback={
+                  <div className="flex-1 bg-white rounded-2xl border border-np-border flex items-center justify-center h-[500px] text-np-muted">
+                    Loading map…
+                  </div>
+                }>
+                  <div className="flex-1 min-w-0 rounded-2xl overflow-hidden border border-np-border shadow-np">
+                    <RouteMap routes={filteredResult.routes} unassigned={filteredResult.unassigned} colourMode={colourMode} />
+                  </div>
+                </Suspense>
+
+                {/* Swap panel — rendered inline to the right of the map (avoids Leaflet z-index conflicts) */}
+                {showSwapModal && result && (
+                  <SwapRoutesModal
+                    routes={result.routes}
+                    onConfirm={handleSwap}
+                    onClose={() => setShowSwapModal(false)}
+                  />
+                )}
+              </div>
             )}
 
             {activeTab === 'list' && (
@@ -846,14 +857,6 @@ export default function RoutePlanner() {
         </div>
       )}
 
-      {/* Swap Routes modal */}
-      {showSwapModal && result && (
-        <SwapRoutesModal
-          routes={result.routes}
-          onConfirm={handleSwap}
-          onClose={() => setShowSwapModal(false)}
-        />
-      )}
     </div>
   );
 }
