@@ -27,15 +27,16 @@ function typeColour(t) {
   return TYPE_COLOURS[t] ?? '#475569';
 }
 
-export default function UnassignedPanel({ stops, routes, maxStops, selectedId, onSelect, onAssign, onClose }) {
-  const [targetAgentId, setTargetAgentId] = useState(routes[0]?.agent_id ?? '');
+export default function UnassignedPanel({ stops, routes, agentlessAgents = [], maxStops, selectedId, onSelect, onAssign, onClose }) {
+  const [targetAgentId, setTargetAgentId] = useState(routes[0]?.agent_id ?? agentlessAgents[0]?.id ?? '');
 
   // Reset agent selection whenever the selected stop changes
   useEffect(() => {
-    setTargetAgentId(routes[0]?.agent_id ?? '');
-  }, [selectedId, routes]);
+    setTargetAgentId(routes[0]?.agent_id ?? agentlessAgents[0]?.id ?? '');
+  }, [selectedId, routes, agentlessAgents]);
 
   const targetRoute   = routes.find(r => r.agent_id === targetAgentId);
+  const isNewRoute    = !targetRoute && agentlessAgents.some(a => a.id === targetAgentId);
   const overCapacity  = !!(targetRoute && maxStops && targetRoute.total_stops >= maxStops);
 
   return (
@@ -60,6 +61,31 @@ export default function UnassignedPanel({ stops, routes, maxStops, selectedId, o
           &times;
         </button>
       </div>
+
+      {/* ── Agents without a route ────────────────────────── */}
+      {agentlessAgents.length > 0 && (
+        <div className="px-4 py-3 bg-blue-50 border-b border-blue-100 shrink-0">
+          <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2">
+            Agents without a route
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {agentlessAgents.map(a => (
+              <span
+                key={a.id}
+                className="inline-flex items-center gap-1.5 bg-white border border-blue-200 text-blue-700 text-xs font-semibold px-2 py-1 rounded-lg"
+              >
+                <span className="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center text-[9px] font-bold">
+                  {a.name.charAt(0).toUpperCase()}
+                </span>
+                {a.name}
+              </span>
+            ))}
+          </div>
+          <p className="text-[10px] text-blue-500 mt-1.5">
+            Assign stops to any of these agents to start a new route.
+          </p>
+        </div>
+      )}
 
       {/* ── Stop list ──────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto divide-y divide-np-border/50 min-h-0">
@@ -114,17 +140,35 @@ export default function UnassignedPanel({ stops, routes, maxStops, selectedId, o
                       onChange={e => setTargetAgentId(e.target.value)}
                       className="w-full border border-np-border rounded-xl px-3 py-2 text-sm text-np-text bg-white focus:outline-none focus:ring-2 focus:ring-np-accent/30 focus:border-np-accent transition-all"
                     >
-                      {routes.map(r => (
-                        <option key={r.agent_id} value={r.agent_id}>
-                          {r.agent_name} — {r.total_stops} stops
-                        </option>
-                      ))}
+                      {routes.length > 0 && (
+                        <optgroup label="Existing routes">
+                          {routes.map(r => (
+                            <option key={r.agent_id} value={r.agent_id}>
+                              {r.agent_name} — {r.total_stops} stops
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {agentlessAgents.length > 0 && (
+                        <optgroup label="Create new route">
+                          {agentlessAgents.map(a => (
+                            <option key={a.id} value={a.id}>
+                              {a.name} — no route yet
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
                     </select>
 
                     {overCapacity && (
                       <div className="mt-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-700 font-medium">
                         {targetRoute.agent_name} is at capacity ({targetRoute.total_stops}/{maxStops} stops).
                         Admin override is allowed.
+                      </div>
+                    )}
+                    {isNewRoute && (
+                      <div className="mt-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 text-xs text-blue-700 font-medium">
+                        This will create a new route for this agent.
                       </div>
                     )}
 

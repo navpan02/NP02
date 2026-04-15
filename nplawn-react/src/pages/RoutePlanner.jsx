@@ -154,6 +154,13 @@ export default function RoutePlanner() {
       });
   }, []);
 
+  // ── Selected agents that received no route from the optimizer ────────────────
+  const agentlessAgents = useMemo(() => {
+    if (!result) return [];
+    const routeAgentIds = new Set(result.routes.map(r => r.agent_id));
+    return agents.filter(a => selectedAgentIds.has(a.id) && !routeAgentIds.has(a.id));
+  }, [result, agents, selectedAgentIds]);
+
   // ── All unique address types in the current result ────────────────────────────
   const allResultTypes = useMemo(() => {
     const types = new Set();
@@ -296,6 +303,7 @@ export default function RoutePlanner() {
       setResult(data);
       setStatus('done');
       setProgress('');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
 
       // Update plan totals
       await supabase.from('route_plans').update({
@@ -361,40 +369,59 @@ export default function RoutePlanner() {
     setResult(prev => {
       if (!prev) return prev;
       const newUnassigned = prev.unassigned.filter(s => s.unique_id !== stop.unique_id);
-      const routes = prev.routes.map(r => {
-        if (r.agent_id !== agentId) return r;
 
-        // Find nearest cluster centroid to place the stop geographically
-        let nearestIdx = 0;
-        let minD = Infinity;
-        (r.clusters ?? []).forEach((c, i) => {
-          const d = Math.abs(c.center.lat - (stop.lat ?? 0)) + Math.abs(c.center.lng - (stop.lng ?? 0));
-          if (d < minD) { minD = d; nearestIdx = i; }
+      let routes;
+      if (prev.routes.some(r => r.agent_id === agentId)) {
+        // Add stop to an existing agent route
+        routes = prev.routes.map(r => {
+          if (r.agent_id !== agentId) return r;
+
+          let nearestIdx = 0, minD = Infinity;
+          (r.clusters ?? []).forEach((c, i) => {
+            const d = Math.abs(c.center.lat - (stop.lat ?? 0)) + Math.abs(c.center.lng - (stop.lng ?? 0));
+            if (d < minD) { minD = d; nearestIdx = i; }
+          });
+
+          const newStop = { ...stop, stop_order: (r.total_stops ?? 0) + 1 };
+          const newClusters = r.clusters?.length
+            ? r.clusters.map((c, i) =>
+                i === nearestIdx
+                  ? { ...c, stops: [...c.stops, newStop], size: (c.size ?? c.stops.length) + 1 }
+                  : c)
+            : [{ id: 'manual', center: { lat: stop.lat ?? 0, lng: stop.lng ?? 0 }, size: 1, stops: [newStop] }];
+
+          return {
+            ...r,
+            clusters: newClusters,
+            stop_sequence: [...(r.stop_sequence ?? []), newStop],
+            total_stops: (r.total_stops ?? 0) + 1,
+          };
         });
-
-        const newStop = { ...stop, stop_order: (r.total_stops ?? 0) + 1 };
-
-        const newClusters = r.clusters?.length
-          ? r.clusters.map((c, i) =>
-              i === nearestIdx
-                ? { ...c, stops: [...c.stops, newStop], size: (c.size ?? c.stops.length) + 1 }
-                : c)
-          : [{ id: 'manual', center: { lat: stop.lat ?? 0, lng: stop.lng ?? 0 }, size: 1, stops: [newStop] }];
-
-        return {
-          ...r,
-          clusters: newClusters,
-          stop_sequence: [...(r.stop_sequence ?? []), newStop],
-          total_stops: (r.total_stops ?? 0) + 1,
+      } else {
+        // Agent has no route yet — create one from scratch
+        const agentInfo = agents.find(a => a.id === agentId);
+        const newStop = { ...stop, stop_order: 1 };
+        const newRoute = {
+          agent_id: agentId,
+          agent_name: agentInfo?.name ?? agentId,
+          assignment_id: null, // not persisted until Republish
+          clusters: [{ id: 'manual-1', center: { lat: stop.lat ?? 0, lng: stop.lng ?? 0 }, size: 1, stops: [newStop] }],
+          stop_sequence: [newStop],
+          total_stops: 1,
+          total_miles: 0,
+          est_hours: 0,
+          google_maps_urls: [],
+          view_token: null,
         };
-      });
+        routes = [...prev.routes, newRoute];
+      }
 
       setUndoStack(stack => [...stack.slice(-9), prev]);
       setPendingChanges(n => n + 1);
       return { ...prev, routes, unassigned: newUnassigned };
     });
     setSelectedUnassigned(null);
-  }, []);
+  }, [agents]);
 
   // ── Undo ─────────────────────────────────────────────────────────────────────
 
@@ -428,6 +455,8 @@ export default function RoutePlanner() {
       const updatedRoutes = await Promise.all(
         result.routes.map(async (route) => {
           const newUrls = buildGoogleMapsUrls(route.stop_sequence ?? []);
+          // Manually-created routes (agentless agents) have no DB record yet — skip
+          if (!route.assignment_id) return { ...route, google_maps_urls: newUrls };
           const { error } = await supabase
             .from('route_assignments')
             .update({
@@ -929,6 +958,7 @@ export default function RoutePlanner() {
                   <UnassignedPanel
                     stops={result.unassigned ?? []}
                     routes={result.routes}
+                    agentlessAgents={agentlessAgents}
                     maxStops={constraints.max_stops}
                     selectedId={selectedUnassigned?.unique_id ?? null}
                     onSelect={setSelectedUnassigned}
