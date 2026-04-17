@@ -382,16 +382,17 @@ export default function RouteMap({
         return (
           <span key={route.agent_id ?? agentIdx}>
             {/* Drive route — dashed polyline between cluster centroids (always agent-coloured) */}
-            {route.clusters.length > 1 && (
+            {(route.clusters ?? []).length > 1 && (
               <Polyline
-                positions={route.clusters.map(c => [c.center.lat, c.center.lng])}
+                positions={(route.clusters ?? []).map(c => [c.center?.lat, c.center?.lng]).filter(p => p[0] != null)}
                 pathOptions={{ color: agentColour, weight: 2, dashArray: '6 4', opacity: 0.7 }}
               />
             )}
 
-            {route.clusters.map(cluster => {
-              const hullPts = convexHull(cluster.stops.map(s => [s.lat, s.lng]));
-              const walkPath = cluster.stops.map(s => [s.lat, s.lng]);
+            {(route.clusters ?? []).map(cluster => {
+              const stops = cluster.stops ?? [];
+              const hullPts = convexHull(stops.map(s => [s.lat, s.lng]));
+              const walkPath = stops.map(s => [s.lat, s.lng]);
 
               return (
                 <span key={cluster.id}>
@@ -417,7 +418,7 @@ export default function RouteMap({
                   )}
 
                   {/* Stop pins — colour depends on colourMode */}
-                  {cluster.stops.map(stop => {
+                  {stops.map(stop => {
                     const pinColour = colourMode === 'type'
                       ? typeColour(stop.address_type)
                       : agentColour;
