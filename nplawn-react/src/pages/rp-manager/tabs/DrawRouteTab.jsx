@@ -124,63 +124,77 @@ export default function DrawRouteTab({ session }) {
 
   const saveRoute = async (mode) => {
     if (!result?.routes?.[0]) return;
-    setSaveStatus('saving'); setConflict(null);
+    setSaveStatus('saving'); setConflict(null); setError('');
 
-    const route = result.routes[0];
+    try {
+      const route = result.routes[0];
 
-    let planId;
-    const { data: existingPlan } = await supabase
-      .from('route_plans').select('id').eq('branch_id', session.branchId)
-      .eq('plan_date', today).order('created_at', { ascending: false }).limit(1);
+      // Get or create today's plan for this branch
+      let planId;
+      const { data: existingPlan, error: planErr } = await supabase
+        .from('route_plans').select('id').eq('branch_id', session.branchId)
+        .eq('plan_date', today).order('created_at', { ascending: false }).limit(1);
 
-    if (existingPlan?.length) {
-      planId = existingPlan[0].id;
-    } else {
-      const { data: newPlan } = await supabase
-        .from('route_plans')
-        .insert({ plan_date: today, constraints, branch_id: session.branchId, created_by: session.username })
-        .select('id').single();
-      planId = newPlan.id;
+      if (planErr) throw new Error(`Could not load plan: ${planErr.message}`);
+
+      if (existingPlan?.length) {
+        planId = existingPlan[0].id;
+      } else {
+        const { data: newPlan, error: newPlanErr } = await supabase
+          .from('route_plans')
+          .insert({ plan_date: today, constraints, branch_id: session.branchId, created_by: session.username })
+          .select('id').single();
+        if (newPlanErr) throw new Error(`Could not create plan: ${newPlanErr.message}`);
+        planId = newPlan.id;
+      }
+
+      // Check for existing assignment for this agent today
+      const { data: existingAssign } = await supabase
+        .from('route_assignments').select('id, stop_sequence, total_stops')
+        .eq('plan_id', planId).eq('agent_id', selectedAgent).maybeSingle();
+
+      if (existingAssign && !conflict) {
+        setConflict(existingAssign); setSaveStatus('idle'); return;
+      }
+
+      let stopSeq  = route.stop_sequence;
+      let assignId = existingAssign?.id;
+
+      if (existingAssign && conflict === 'merge') {
+        const prev = existingAssign.stop_sequence ?? [];
+        stopSeq = [...prev, ...route.stop_sequence.map((s, i) => ({ ...s, stop_order: prev.length + i + 1 }))];
+      }
+
+      const payload = {
+        plan_id: planId, agent_id: selectedAgent,
+        agent_name: agents.find(a => a.id === selectedAgent)?.name ?? '',
+        stop_sequence: stopSeq, cluster_sequence: route.clusters?.map(c => c.id) ?? [],
+        total_stops: stopSeq.length, total_miles: route.total_miles,
+        est_hours: route.est_hours, google_maps_urls: buildGoogleMapsUrls(stopSeq),
+        branch_id: session.branchId,
+      };
+
+      if (existingAssign) {
+        const { error: upErr } = await supabase.from('route_assignments').update(payload).eq('id', existingAssign.id);
+        if (upErr) throw new Error(`Could not update assignment: ${upErr.message}`);
+      } else {
+        const { data: newAssign, error: insErr } = await supabase
+          .from('route_assignments').insert(payload).select('id').single();
+        if (insErr) throw new Error(`Could not save assignment: ${insErr.message}`);
+        assignId = newAssign.id;
+      }
+
+      if (filtered.length) {
+        await supabase.from('route_addresses')
+          .update({ status: 'assigned', assignment_id: assignId })
+          .in('id', filtered.map(a => a.id));
+      }
+
+      setSaveStatus('saved');
+    } catch (e) {
+      setError(e.message ?? 'Save failed');
+      setSaveStatus('idle');
     }
-
-    const { data: existingAssign } = await supabase
-      .from('route_assignments').select('id, stop_sequence, total_stops')
-      .eq('plan_id', planId).eq('agent_id', selectedAgent).single();
-
-    if (existingAssign && !conflict) {
-      setConflict(existingAssign); setSaveStatus('idle'); return;
-    }
-
-    let stopSeq  = route.stop_sequence;
-    let assignId = existingAssign?.id;
-
-    if (existingAssign && conflict === 'merge') {
-      const prev = existingAssign.stop_sequence ?? [];
-      stopSeq = [...prev, ...route.stop_sequence.map((s, i) => ({ ...s, stop_order: prev.length + i + 1 }))];
-    }
-
-    const payload = {
-      plan_id: planId, agent_id: selectedAgent,
-      agent_name: agents.find(a => a.id === selectedAgent)?.name ?? '',
-      stop_sequence: stopSeq, cluster_sequence: route.clusters,
-      total_stops: stopSeq.length, total_miles: route.total_miles,
-      est_hours: route.est_hours, google_maps_urls: buildGoogleMapsUrls(stopSeq),
-      branch_id: session.branchId,
-    };
-
-    if (existingAssign) {
-      await supabase.from('route_assignments').update(payload).eq('id', existingAssign.id);
-    } else {
-      const { data: newAssign } = await supabase
-        .from('route_assignments').insert(payload).select('id').single();
-      assignId = newAssign.id;
-    }
-
-    await supabase.from('route_addresses')
-      .update({ status: 'assigned', assignment_id: assignId })
-      .in('id', filtered.map(a => a.id));
-
-    setSaveStatus('saved');
   };
 
   const agentName = agents.find(a => a.id === selectedAgent)?.name ?? '';
