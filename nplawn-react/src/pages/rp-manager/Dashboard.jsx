@@ -10,7 +10,7 @@ const DrawRouteTab  = lazy(() => import('./tabs/DrawRouteTab'));
 
 const TABS = [
   { id: 'routes',      label: "Today's Routes",  icon: '🗺' },
-  { id: 'draw',        label: 'Draw Route',       icon: '✏️' },
+  { id: 'draw',        label: 'Add/Edit Route',   icon: '✏️' },
   { id: 'agents',      label: 'Agents',           icon: '👤' },
   { id: 'constraints', label: 'Constraints',      icon: '⚙️' },
 ];

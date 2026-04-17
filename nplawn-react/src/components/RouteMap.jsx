@@ -321,6 +321,7 @@ export default function RouteMap({
   allAddresses = [],
   shapeAddresses = [],
   onShapeComplete,
+  onAddressClick,
 }) {
   // Accept either result.routes or direct routes prop
   const routes = result?.routes ?? routesProp ?? [];
@@ -367,13 +368,15 @@ export default function RouteMap({
             position={[addr.lat, addr.lng]}
             icon={createPinIcon(colour, label)}
             opacity={opacity}
+            eventHandlers={{ click: () => !isDnk && onAddressClick?.(addr) }}
           >
             <Popup>
               <div style={{ fontSize: 12 }}>
                 <strong>{addr.address}</strong><br />
                 <span style={{ color: '#6b7280' }}>{addr.address_type?.replace(/_/g,' ')}</span>
-                {isDnk     && <div style={{ color: '#94a3b8', marginTop: 4 }}>⛔ Do Not Knock</div>}
+                {isDnk      && <div style={{ color: '#94a3b8', marginTop: 4 }}>⛔ Do Not Knock</div>}
                 {isAssigned && !isDnk && <div style={{ color: '#0891b2', marginTop: 4 }}>✓ Already assigned</div>}
+                {!isDnk && !isAssigned && <div style={{ color: '#6b7280', marginTop: 4 }}>{inShape ? 'Click to remove' : 'Click to add'}</div>}
               </div>
             </Popup>
           </Marker>
