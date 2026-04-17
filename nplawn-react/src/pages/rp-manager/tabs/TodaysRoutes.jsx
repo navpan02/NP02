@@ -2,6 +2,20 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { exportAgentCSV, exportAllCSV, buildGoogleMapsUrls } from '../../../utils/routeExport';
 
+function buildClusters(stops) {
+  const map = new Map();
+  for (const stop of stops) {
+    const cid = stop.cluster_id ?? 'C0';
+    if (!map.has(cid)) map.set(cid, []);
+    map.get(cid).push(stop);
+  }
+  return Array.from(map.entries()).map(([id, clStops]) => {
+    const lat = clStops.reduce((s, p) => s + (p.lat ?? 0), 0) / clStops.length;
+    const lng = clStops.reduce((s, p) => s + (p.lng ?? 0), 0) / clStops.length;
+    return { id, center: { lat, lng }, size: clStops.length, stops: clStops };
+  });
+}
+
 const RouteMap      = lazy(() => import('../../../components/RouteMap'));
 const RouteListView = lazy(() => import('../../../components/RouteListView'));
 
@@ -37,18 +51,21 @@ export default function TodaysRoutes({ session }) {
 
     if (assignments?.length) {
       setResult({
-        routes: assignments.map(a => ({
-          agent_id:        a.agent_id,
-          agent_name:      a.agent_name,
-          assignment_id:   a.id,
-          stop_sequence:   a.stop_sequence ?? [],
-          clusters:        a.cluster_sequence ?? [],
-          total_stops:     a.total_stops,
-          total_miles:     a.total_miles,
-          est_hours:       a.est_hours,
-          google_maps_urls: a.google_maps_urls ?? [],
-          view_token:      a.view_token,
-        })),
+        routes: assignments.map(a => {
+          const stopSeq = a.stop_sequence ?? [];
+          return {
+            agent_id:         a.agent_id,
+            agent_name:       a.agent_name,
+            assignment_id:    a.id,
+            stop_sequence:    stopSeq,
+            clusters:         buildClusters(stopSeq),
+            total_stops:      a.total_stops,
+            total_miles:      a.total_miles,
+            est_hours:        a.est_hours,
+            google_maps_urls: a.google_maps_urls ?? [],
+            view_token:       a.view_token,
+          };
+        }),
         unassigned: [],
         stats: { total_input: p.total_stops, assigned: p.total_stops - p.unassigned_ct, excluded: 0, unassigned: p.unassigned_ct },
       });
@@ -79,7 +96,7 @@ export default function TodaysRoutes({ session }) {
         )}
         <div className="ml-auto flex items-center gap-2">
           <button
-            onClick={() => exportAllCSV(result.routes, today)}
+            onClick={() => exportAllCSV(result.routes, result.unassigned ?? [], today)}
             className="bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
           >
             Export All CSV
