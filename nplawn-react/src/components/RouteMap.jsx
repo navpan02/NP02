@@ -250,8 +250,79 @@ function nearestAgentForDrop(latlng, routes) {
   return best;
 }
 
-export default function RouteMap({ routes, unassigned = [], colourMode = 'agent', selectedUnassignedId, onUnassignedClick, onUnassignedDrop }) {
-  if (!routes || routes.length === 0) {
+// ── Draw-mode controller (uses leaflet-geoman if available) ──────────────────
+function DrawController({ onShapeComplete }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    import('@geoman-io/leaflet-geoman-free').then(({ default: _ }) => {
+      // geoman attaches itself to L and map via side-effect import
+      if (!map.pm) return;
+      map.pm.addControls({ position: 'topleft', drawCircle: true, drawPolygon: true, drawMarker: false, drawPolyline: false, drawRectangle: false, drawText: false, editMode: true, dragMode: false, cutPolygon: false, removalMode: false });
+
+      let currentLayer = null;
+
+      const handleCreate = (e) => {
+        if (currentLayer) map.removeLayer(currentLayer);
+        currentLayer = e.layer;
+        const type = e.shape?.toLowerCase();
+        if (type === 'circle') {
+          const c = e.layer.getLatLng();
+          onShapeComplete({ type: 'circle', center: { lat: c.lat, lng: c.lng }, radiusM: e.layer.getRadius() });
+        } else {
+          const ring = e.layer.getLatLngs()[0].map(ll => ({ lat: ll.lat, lng: ll.lng }));
+          onShapeComplete({ type: 'polygon', ring });
+        }
+      };
+
+      const handleEdit = (e) => {
+        const layer = e.layer;
+        if (layer.getRadius) {
+          const c = layer.getLatLng();
+          onShapeComplete({ type: 'circle', center: { lat: c.lat, lng: c.lng }, radiusM: layer.getRadius() });
+        } else {
+          const ring = layer.getLatLngs()[0].map(ll => ({ lat: ll.lat, lng: ll.lng }));
+          onShapeComplete({ type: 'polygon', ring });
+        }
+      };
+
+      map.on('pm:create', handleCreate);
+      map.on('pm:edit', handleEdit);
+
+      return () => {
+        map.pm.removeControls();
+        map.off('pm:create', handleCreate);
+        map.off('pm:edit', handleEdit);
+        if (currentLayer) map.removeLayer(currentLayer);
+      };
+    }).catch(() => {
+      // geoman not installed — draw mode silently unavailable
+    });
+  }, [map, onShapeComplete]);
+
+  return null;
+}
+
+export default function RouteMap({
+  result,
+  // legacy prop aliases kept for backward compat
+  routes: routesProp,
+  unassigned = [],
+  colourMode = 'agent',
+  selectedUnassignedId,
+  onUnassignedClick,
+  onUnassignedDrop,
+  // draw-mode props
+  drawMode = false,
+  allAddresses = [],
+  shapeAddresses = [],
+  onShapeComplete,
+}) {
+  // Accept either result.routes or direct routes prop
+  const routes = result?.routes ?? routesProp ?? [];
+
+  if (!drawMode && (!routes || routes.length === 0)) {
     return (
       <div className="route-map-empty">
         <p>No routes to display.</p>
@@ -259,20 +330,53 @@ export default function RouteMap({ routes, unassigned = [], colourMode = 'agent'
     );
   }
 
+  const mapCenter = drawMode && allAddresses.length
+    ? [allAddresses[0].lat ?? 41.88, allAddresses[0].lng ?? -87.63]
+    : [41.88, -87.63];
+
   return (
     <MapContainer
-      center={[41.88, -87.63]}
+      center={mapCenter}
       zoom={11}
-      style={{ height: '600px', width: '100%', borderRadius: '8px' }}
+      style={{ height: drawMode ? '100%' : '600px', minHeight: '400px', width: '100%', borderRadius: drawMode ? '0' : '8px' }}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <FitBounds routes={routes} />
-      <MapLegend colourMode={colourMode} routes={routes} />
+      {!drawMode && <FitBounds routes={routes} />}
+      {drawMode && onShapeComplete && <DrawController onShapeComplete={onShapeComplete} />}
 
-      {routes.map((route, agentIdx) => {
+      {/* In draw mode: render all addresses as background pins, shape-selected highlighted */}
+      {drawMode && allAddresses.map(addr => {
+        if (!addr.lat || !addr.lng) return null;
+        const inShape = shapeAddresses.some(s => s.id === addr.id);
+        const isDnk   = addr.address_type === 'do_not_knock';
+        const colour  = isDnk ? '#94a3b8' : inShape ? '#16a34a' : '#cbd5e1';
+        const opacity = isDnk ? 0.4 : inShape ? 1 : 0.5;
+        return (
+          <Marker
+            key={addr.id}
+            position={[addr.lat, addr.lng]}
+            icon={createPinIcon(colour, '')}
+            opacity={opacity}
+          >
+            <Popup>
+              <div style={{ fontSize: 12 }}>
+                <strong>{addr.address}</strong><br />
+                <span style={{ color: '#6b7280' }}>{addr.address_type?.replace(/_/g,' ')}</span>
+                {isDnk && <div style={{ color: '#ef4444', marginTop: 4 }}>⛔ Do Not Knock</div>}
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
+      {!drawMode && <>
+        <FitBounds routes={routes} />
+        <MapLegend colourMode={colourMode} routes={routes} />
+      </>}
+
+      {!drawMode && routes.map((route, agentIdx) => {
         const agentColour = AGENT_COLOURS[agentIdx % AGENT_COLOURS.length];
 
         return (
@@ -346,8 +450,8 @@ export default function RouteMap({ routes, unassigned = [], colourMode = 'agent'
         );
       })}
 
-      {/* Unassigned stops — red, draggable, click/drop to assign */}
-      {unassigned.map(stop => {
+      {/* Unassigned stops — red, draggable, click/drop to assign (non-draw mode) */}
+      {!drawMode && unassigned.map(stop => {
         if (!stop.lat || !stop.lng) return null;
 
         // Selected stop gets the highlighted icon + fly-to + auto-popup
