@@ -250,9 +250,11 @@ export default function DrawRouteTab({ session }) {
   };
 
   const agentName      = agents.find(a => a.id === selectedAgent)?.name ?? '';
-  const byType         = filtered.reduce((acc, a) => { acc[a.address_type] = (acc[a.address_type] ?? 0) + 1; return acc; }, {});
-  const assignedCount  = addresses.filter(a => a.status === 'assigned').length;
-  const unassignedCount = addresses.filter(a => a.status !== 'assigned' && a.address_type !== DNK_TYPE).length;
+  const byType              = filtered.reduce((acc, a) => { acc[a.address_type] = (acc[a.address_type] ?? 0) + 1; return acc; }, {});
+  const assignedCount       = addresses.filter(a => a.status === 'assigned').length;
+  const unassignedMappable  = addresses.filter(a => a.status !== 'assigned' && a.address_type !== DNK_TYPE && a.lat && a.lng);
+  const unassignedNoCoords  = addresses.filter(a => a.status !== 'assigned' && a.address_type !== DNK_TYPE && (!a.lat || !a.lng));
+  const unassignedCount     = unassignedMappable.length;
 
   return (
     <div className="flex h-full">
@@ -322,10 +324,20 @@ export default function DrawRouteTab({ session }) {
                   {assignedCount} assigned
                 </span>
               )}
+              {unassignedNoCoords.length > 0 && (
+                <span className="flex items-center gap-1 text-xs text-gray-400" title="These addresses could not be geocoded and have no map coordinates">
+                  ⚠ {unassignedNoCoords.length} no location
+                </span>
+              )}
             </div>
           )}
-          {!addrLoading && addresses.length > 0 && unassignedCount === 0 && (
+          {!addrLoading && addresses.length > 0 && unassignedCount === 0 && unassignedNoCoords.length === 0 && (
             <p className="mt-1.5 text-xs text-amber-600">All stops are assigned. You can still select any pin (cyan) to add it to a new route.</p>
+          )}
+          {!addrLoading && unassignedNoCoords.length > 0 && (
+            <p className="mt-1.5 text-xs text-amber-600">
+              {unassignedNoCoords.length} stop{unassignedNoCoords.length > 1 ? 's' : ''} couldn't be geocoded (no coordinates) — they can't be shown on the map. Use a CSV with lat/lng columns to include them.
+            </p>
           )}
         </div>
 
