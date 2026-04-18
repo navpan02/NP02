@@ -35,7 +35,7 @@ export default function TodaysRoutes({ session }) {
     const { data: plans } = await supabase
       .from('route_plans')
       .select('*')
-      .eq('branch_id', session.branchId)
+      .or(`branch_id.eq.${session.branchId},branch_id.is.null`)
       .eq('plan_date', today)
       .order('created_at', { ascending: false })
       .limit(1);
