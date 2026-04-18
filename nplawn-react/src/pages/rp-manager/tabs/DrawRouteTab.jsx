@@ -67,7 +67,7 @@ export default function DrawRouteTab({ session }) {
 
     supabase.from('route_plans')
       .select('id')
-      .eq('plan_date', today)
+      .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(1)
       .then(async ({ data: plans }) => {
@@ -79,7 +79,7 @@ export default function DrawRouteTab({ session }) {
           .neq('address_type', DNK_TYPE);
         setAddresses(addrs ?? []);
       });
-  }, [session.branchId]);
+  }, []);
 
   // Shape drawing — bulk-select addresses inside polygon/circle
   const handleShapeComplete = useCallback((shapeData) => {
