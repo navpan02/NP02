@@ -19,8 +19,9 @@ function withTimeout(promise, ms = 15000) {
 export default function DrawRouteTab({ session }) {
   const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
 
-  const [addresses, setAddresses] = useState([]);
-  const [agents, setAgents]       = useState([]);
+  const [addresses, setAddresses]   = useState([]);
+  const [addrLoading, setAddrLoading] = useState(true);
+  const [agents, setAgents]         = useState([]);
   const [selectedAgent, setAgent] = useState('');
   const [constraints, setConstraints] = useState(DEFAULT_CONSTRAINTS);
   const [showConstraints, setShowCon] = useState(false);
@@ -71,13 +72,52 @@ export default function DrawRouteTab({ session }) {
       .order('created_at', { ascending: false })
       .limit(1)
       .then(async ({ data: plans }) => {
-        if (!plans?.length) return;
+        if (!plans?.length) { setAddrLoading(false); return; }
+        const planId = plans[0].id;
+
         const { data: addrs } = await supabase
           .from('route_addresses')
           .select('id,address,city,state,zip,address_type,lat,lng,status,assignment_id')
-          .eq('plan_id', plans[0].id)
+          .eq('plan_id', planId)
           .neq('address_type', DNK_TYPE);
-        setAddresses(addrs ?? []);
+
+        if (addrs?.length) {
+          setAddresses(addrs);
+          setAddrLoading(false);
+          return;
+        }
+
+        // Fallback for plans generated before route_addresses was populated:
+        // derive assigned stops from route_assignments stop_sequences
+        const { data: assignments } = await supabase
+          .from('route_assignments')
+          .select('id,stop_sequence')
+          .eq('plan_id', planId);
+
+        if (assignments?.length) {
+          const derived = [];
+          const seen = new Set();
+          for (const asgn of assignments) {
+            for (const stop of asgn.stop_sequence ?? []) {
+              if (!stop.unique_id || seen.has(stop.unique_id)) continue;
+              seen.add(stop.unique_id);
+              derived.push({
+                id: stop.unique_id,
+                address: stop.address,
+                city: stop.city ?? '',
+                state: stop.state ?? '',
+                zip: stop.zip ?? '',
+                address_type: stop.address_type ?? 'homeowner',
+                lat: stop.lat,
+                lng: stop.lng,
+                status: 'assigned',
+                assignment_id: asgn.id,
+              });
+            }
+          }
+          setAddresses(derived);
+        }
+        setAddrLoading(false);
       });
   }, []);
 
@@ -210,18 +250,27 @@ export default function DrawRouteTab({ session }) {
     }
   };
 
-  const agentName = agents.find(a => a.id === selectedAgent)?.name ?? '';
-  const byType    = filtered.reduce((acc, a) => { acc[a.address_type] = (acc[a.address_type] ?? 0) + 1; return acc; }, {});
+  const agentName      = agents.find(a => a.id === selectedAgent)?.name ?? '';
+  const byType         = filtered.reduce((acc, a) => { acc[a.address_type] = (acc[a.address_type] ?? 0) + 1; return acc; }, {});
+  const assignedCount  = addresses.filter(a => a.status === 'assigned').length;
+  const unassignedCount = addresses.filter(a => a.status !== 'assigned' && a.address_type !== DNK_TYPE).length;
 
   return (
     <div className="flex h-full">
       {/* Map pane */}
       <div className="flex-1 relative">
-        {addresses.length === 0 && (
+        {addrLoading && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 bg-gray-50/80 pointer-events-none">
+            <div className="text-center text-gray-400">
+              <p className="font-medium">Loading address pool…</p>
+            </div>
+          </div>
+        )}
+        {!addrLoading && addresses.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center z-10 bg-gray-50/80 pointer-events-none">
             <div className="text-center text-gray-500">
-              <p className="font-medium">No address pool loaded for today</p>
-              <p className="text-sm mt-1">Ask admin to run today's route plan first.</p>
+              <p className="font-medium">No address pool loaded</p>
+              <p className="text-sm mt-1">Ask admin to run (or re-run) today's route plan first.</p>
             </div>
           </div>
         )}
@@ -255,6 +304,25 @@ export default function DrawRouteTab({ session }) {
             </div>
           </div>
           <p className="text-xs text-gray-500">Draw a shape to bulk-select, or click individual pins to add/remove stops.</p>
+          {addresses.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+              {unassignedCount > 0 && (
+                <span className="flex items-center gap-1 text-xs text-gray-600">
+                  <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: '#f97316' }} />
+                  {unassignedCount} unassigned
+                </span>
+              )}
+              {assignedCount > 0 && (
+                <span className="flex items-center gap-1 text-xs text-gray-600">
+                  <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: '#0891b2' }} />
+                  {assignedCount} assigned
+                </span>
+              )}
+            </div>
+          )}
+          {!addrLoading && addresses.length > 0 && unassignedCount === 0 && (
+            <p className="mt-1.5 text-xs text-amber-600">All stops are assigned. You can still select any pin (cyan) to add it to a new route.</p>
+          )}
         </div>
 
         {/* Selection summary */}
