@@ -67,7 +67,6 @@ export default function DrawRouteTab({ session }) {
 
     supabase.from('route_plans')
       .select('id')
-      .or(`branch_id.eq.${session.branchId},branch_id.is.null`)
       .eq('plan_date', today)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -141,7 +140,6 @@ export default function DrawRouteTab({ session }) {
       let planId;
       const { data: existingPlan, error: planErr } = await withTimeout(
         supabase.from('route_plans').select('id')
-          .or(`branch_id.eq.${session.branchId},branch_id.is.null`)
           .eq('plan_date', today).order('created_at', { ascending: false }).limit(1)
       );
       if (planErr) throw new Error(`Could not load plan: ${planErr.message}`);
