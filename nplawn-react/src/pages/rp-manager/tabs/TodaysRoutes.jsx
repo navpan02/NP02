@@ -24,6 +24,7 @@ export default function TodaysRoutes({ session }) {
   const [plan, setPlan]     = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [view, setView]     = useState('map'); // map | list
 
   useEffect(() => {
@@ -32,18 +33,20 @@ export default function TodaysRoutes({ session }) {
 
   const loadTodaysPlan = async () => {
     setLoading(true);
-    const { data: plans } = await supabase
+    setLoadError('');
+    const { data: plans, error: planErr } = await supabase
       .from('route_plans')
       .select('*')
       .eq('plan_date', today)
       .order('created_at', { ascending: false })
       .limit(1);
 
+    if (planErr) { setLoadError(`Plan query failed: ${planErr.message}`); setLoading(false); return; }
     if (!plans?.length) { setLoading(false); return; }
     const p = plans[0];
     setPlan(p);
 
-    const [{ data: assignments }, { data: unassignedAddrs }] = await Promise.all([
+    const [{ data: assignments, error: aErr }, { data: unassignedAddrs }] = await Promise.all([
       supabase.from('route_assignments').select('*').eq('plan_id', p.id),
       supabase.from('route_addresses')
         .select('id,address,city,state,zip,address_type,lat,lng')
@@ -51,6 +54,7 @@ export default function TodaysRoutes({ session }) {
         .eq('status', 'unassigned')
         .neq('address_type', 'do_not_knock'),
     ]);
+    if (aErr) { setLoadError(`Assignments query failed: ${aErr.message}`); setLoading(false); return; }
 
     const unassigned = (unassignedAddrs ?? []).map(a => ({ ...a, unique_id: a.id }));
 
@@ -80,12 +84,22 @@ export default function TodaysRoutes({ session }) {
 
   if (loading) return <div className="p-8 text-center text-gray-400">Loading today's routes…</div>;
 
+  if (loadError) {
+    return (
+      <div className="p-8 text-center text-red-500">
+        <p className="font-medium mb-1">Error loading routes</p>
+        <p className="text-sm font-mono">{loadError}</p>
+        <button onClick={loadTodaysPlan} className="mt-3 text-sm underline">Retry</button>
+      </div>
+    );
+  }
+
   if (!result) {
     return (
       <div className="p-8 text-center text-gray-400">
         <div className="text-4xl mb-3">📋</div>
         <p className="font-medium text-gray-600 mb-1">No routes generated for today</p>
-        <p className="text-sm">Use the <strong>Draw Route</strong> tab to build a route manually, or ask your admin to generate today's plan.</p>
+        <p className="text-sm">Use the <strong>Route Planner</strong> tab to generate routes, or use <strong>Add/Edit Route</strong> to build one manually.</p>
       </div>
     );
   }
