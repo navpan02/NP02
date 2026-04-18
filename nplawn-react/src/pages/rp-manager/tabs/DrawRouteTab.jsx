@@ -8,6 +8,13 @@ const RouteMap = lazy(() => import('../../../components/RouteMap'));
 
 const DNK_TYPE = 'do_not_knock';
 
+function loadAgentConstraints(agentId) {
+  try {
+    const raw = localStorage.getItem(`agent_constraints_${agentId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
 // Rejects if the promise doesn't settle within ms milliseconds
 function withTimeout(promise, ms = 15000) {
   return Promise.race([
@@ -62,14 +69,25 @@ export default function DrawRouteTab({ session }) {
     return () => window.removeEventListener('keydown', handler);
   });
 
+  // Load agent-specific constraints from localStorage when agent changes
+  useEffect(() => {
+    if (!selectedAgent) return;
+    const saved = loadAgentConstraints(selectedAgent);
+    setConstraints(saved ? { ...DEFAULT_CONSTRAINTS, ...saved } : DEFAULT_CONSTRAINTS);
+  }, [selectedAgent]);
+
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     setAddrLoading(true);
     setAddresses([]);
 
-    supabase.from('agents').select('*').eq('branch_id', session.branchId).eq('active', true)
-      .then(({ data }) => { setAgents(data ?? []); if (data?.length) setAgent(a => a || data[0].id); });
+    supabase.from('agents').select('*').eq('active', true).order('name')
+      .then(({ data, error: err }) => {
+        const list = (!err && data?.length) ? data : [];
+        setAgents(list);
+        if (list.length) setAgent(a => a || list[0].id);
+      });
 
     supabase.from('route_plans')
       .select('id')
@@ -391,7 +409,12 @@ export default function DrawRouteTab({ session }) {
             onClick={() => setShowCon(v => !v)}
             className="w-full px-4 py-3 flex items-center justify-between text-xs font-semibold text-gray-600 hover:bg-gray-50"
           >
-            <span>Constraint overrides</span>
+            <span className="flex items-center gap-1.5">
+              Constraint overrides
+              {selectedAgent && loadAgentConstraints(selectedAgent) && (
+                <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-1.5 py-0.5 rounded">custom</span>
+              )}
+            </span>
             <span>{showConstraints ? '▲' : '▼'}</span>
           </button>
           {showConstraints && (
