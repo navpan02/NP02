@@ -107,7 +107,7 @@ function StatCard({ label, value, accent }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function RoutePlanner({ portalSession } = {}) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
 
   const [planDate, setPlanDate] = useState(today);
   const [csvData, setCsvData] = useState([]);

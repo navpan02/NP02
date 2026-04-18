@@ -17,7 +17,7 @@ function withTimeout(promise, ms = 15000) {
 }
 
 export default function DrawRouteTab({ session }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
 
   const [addresses, setAddresses] = useState([]);
   const [agents, setAgents]       = useState([]);

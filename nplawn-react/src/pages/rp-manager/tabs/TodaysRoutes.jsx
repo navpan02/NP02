@@ -20,7 +20,7 @@ const RouteMap      = lazy(() => import('../../../components/RouteMap'));
 const RouteListView = lazy(() => import('../../../components/RouteListView'));
 
 export default function TodaysRoutes({ session }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
   const [plan, setPlan]     = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
