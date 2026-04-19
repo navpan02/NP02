@@ -260,7 +260,7 @@ export default function RoutePlanner({ portalSession } = {}) {
     setErrorMsg('');
     setResult(null);
 
-    const geocodeNeeded = csvData.filter(r => r.lat === undefined).length;
+    const geocodeNeeded = csvData.filter(r => r.lat == null).length;
     if (geocodeNeeded > 0) {
       setProgress(
         `Geocoding ${geocodeNeeded.toLocaleString()} new address${geocodeNeeded > 1 ? 'es' : ''} via Nominatim — this may take a few minutes the first time…`,

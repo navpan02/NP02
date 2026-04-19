@@ -44,7 +44,7 @@ export default function ManagerAccounts({ session }) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-bold text-gray-900">Manager Accounts</h2>
-          <p className="text-xs text-gray-500 mt-0.5">All managers share the same portal password as admin2.</p>
+          <p className="text-xs text-gray-500 mt-0.5">Managers log in at <code className="font-mono">/rp-manager/login</code> using their username and the shared portal password.</p>
         </div>
         <button
           onClick={() => setForm({ ...EMPTY })}

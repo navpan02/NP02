@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../../lib/supabase';
 import ConstraintPanel, { DEFAULT_CONSTRAINTS } from '../../../components/ConstraintPanel';
 
@@ -28,12 +28,20 @@ function saveAgentConstraints(agentId, constraints) {
 export default function AgentsTab({ session }) {
   const [agents, setAgents]         = useState([]);
   const [loading, setLoading]       = useState(true);
-  const [form, setForm]             = useState(null); // null | agent object
-  const [conAgent, setConAgent]     = useState(null); // agent being constraint-edited
+  const [form, setForm]             = useState(null);
+  const [conAgent, setConAgent]     = useState(null);
   const [constraints, setConstraints] = useState(DEFAULT_CONSTRAINTS);
   const [saving, setSaving]         = useState(false);
   const [error, setError]           = useState('');
   const [conSaved, setConSaved]     = useState(false);
+  const [constraintVersion, setConstraintVersion] = useState(0);
+
+  // Re-computed only when agents list or a save happens — avoids localStorage reads in render
+  const agentsWithConstraints = useMemo(
+    () => new Set(agents.filter(a => loadAgentConstraints(a.id)).map(a => a.id)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [agents, constraintVersion],
+  );
 
   useEffect(() => {
     loadAgents();
@@ -84,6 +92,7 @@ export default function AgentsTab({ session }) {
   const saveConstraints = () => {
     if (!conAgent) return;
     saveAgentConstraints(conAgent.id, constraints);
+    setConstraintVersion(v => v + 1);
     setConSaved(true);
     setTimeout(() => { setConSaved(false); setConAgent(null); }, 1200);
   };
@@ -125,7 +134,7 @@ export default function AgentsTab({ session }) {
                     <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${agent.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                       {agent.active ? 'Active' : 'Inactive'}
                     </span>
-                    {loadAgentConstraints(agent.id) && (
+                    {agentsWithConstraints.has(agent.id) && (
                       <span className="ml-2 text-[10px] text-blue-600 font-semibold bg-blue-50 px-1.5 py-0.5 rounded">custom limits</span>
                     )}
                   </td>

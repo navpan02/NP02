@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { filterPointsInCircle, filterPointsInPolygon } from '../../../utils/geoFilter';
 import ConstraintPanel, { DEFAULT_CONSTRAINTS } from '../../../components/ConstraintPanel';
@@ -55,19 +55,29 @@ export default function DrawRouteTab({ session }) {
     setError('');
   }, [historyIdx]);
 
-  const undo = () => setHistoryIdx(i => Math.max(0, i - 1));
-  const redo = () => setHistoryIdx(i => Math.min(history.length - 1, i + 1));
   const canUndo = historyIdx > 0;
   const canRedo = historyIdx < history.length - 1;
+  const undo = () => setHistoryIdx(i => Math.max(0, i - 1));
+  const redo = () => setHistoryIdx(i => Math.min(history.length - 1, i + 1));
+
+  // Keep a ref so the keyboard handler always sees fresh history without re-registering
+  const historyRef = useRef({ history, historyIdx });
+  historyRef.current = { history, historyIdx };
 
   useEffect(() => {
     const handler = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        setHistoryIdx(i => Math.max(0, i - 1));
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        setHistoryIdx(i => Math.min(historyRef.current.history.length - 1, i + 1));
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  });
+  }, []); // register once — ref keeps values fresh
 
   // Load agent-specific constraints from localStorage when agent changes
   useEffect(() => {
@@ -195,9 +205,10 @@ export default function DrawRouteTab({ session }) {
 
       // Get or create today's plan for this branch
       let planId;
+      let planQuery = supabase.from('route_plans').select('id').eq('plan_date', today);
+      if (session.branchId) planQuery = planQuery.eq('branch_id', session.branchId);
       const { data: existingPlan, error: planErr } = await withTimeout(
-        supabase.from('route_plans').select('id')
-          .eq('plan_date', today).order('created_at', { ascending: false }).limit(1)
+        planQuery.order('created_at', { ascending: false }).limit(1)
       );
       if (planErr) throw new Error(`Could not load plan: ${planErr.message}`);
 
