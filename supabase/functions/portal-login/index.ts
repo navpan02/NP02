@@ -120,6 +120,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (err) {
+    console.error('Portal login error:', err instanceof Error ? err.message : String(err));
     return new Response(JSON.stringify({ error: 'Unexpected error' }), {
       status: 500, headers: { ...CORS, 'Content-Type': 'application/json' },
     });

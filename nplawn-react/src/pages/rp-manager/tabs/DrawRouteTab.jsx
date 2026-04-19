@@ -108,11 +108,13 @@ export default function DrawRouteTab({ session }) {
         if (!plans?.length) { setAddrLoading(false); return; }
         const planId = plans[0].id;
 
-        const { data: addrs } = await supabase
+        const { data: addrs, error: addrErr } = await supabase
           .from('route_addresses')
           .select('id,address,city,state,zip,address_type,lat,lng,status,assignment_id')
           .eq('plan_id', planId)
           .neq('address_type', DNK_TYPE);
+
+        if (addrErr) { console.error('Failed to load route_addresses:', addrErr.message); }
 
         if (addrs?.length) {
           setAddresses(addrs);
@@ -121,10 +123,12 @@ export default function DrawRouteTab({ session }) {
         }
 
         // Fallback: derive from route_assignments stop_sequences
-        const { data: assignments } = await supabase
+        const { data: assignments, error: asgErr } = await supabase
           .from('route_assignments')
           .select('id,stop_sequence')
           .eq('plan_id', planId);
+
+        if (asgErr) { console.error('Failed to load route_assignments:', asgErr.message); }
 
         if (assignments?.length) {
           const derived = [];
@@ -264,11 +268,12 @@ export default function DrawRouteTab({ session }) {
       }
 
       if (filtered.length) {
-        await withTimeout(
+        const { error: addrErr } = await withTimeout(
           supabase.from('route_addresses')
             .update({ status: 'assigned', assignment_id: assignId })
             .in('id', filtered.map(a => a.id))
         );
+        if (addrErr) throw new Error(`Could not mark addresses as assigned: ${addrErr.message}`);
       }
 
       setSaveStatus('saved');

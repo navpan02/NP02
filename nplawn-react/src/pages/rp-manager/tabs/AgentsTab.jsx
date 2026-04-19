@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../../lib/supabase';
 import ConstraintPanel, { DEFAULT_CONSTRAINTS } from '../../../components/ConstraintPanel';
+import StatusBadge from '../../../components/rp/StatusBadge';
 
 const AGENT_FIELDS = [
   { key: 'name',          label: 'Name',          required: true },
@@ -131,9 +132,7 @@ export default function AgentsTab({ session }) {
                   <td className="px-4 py-3 font-medium text-gray-900">{agent.name}</td>
                   <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{agent.email ?? '—'}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${agent.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {agent.active ? 'Active' : 'Inactive'}
-                    </span>
+                    <StatusBadge active={agent.active} />
                     {agentsWithConstraints.has(agent.id) && (
                       <span className="ml-2 text-[10px] text-blue-600 font-semibold bg-blue-50 px-1.5 py-0.5 rounded">custom limits</span>
                     )}

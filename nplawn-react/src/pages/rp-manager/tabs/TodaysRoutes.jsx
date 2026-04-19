@@ -70,13 +70,14 @@ export default function TodaysRoutes({ session }) {
     const p = plans[0];
     setPlan(p);
 
-    const [{ data: assignments, error: aErr }, { data: unassignedAddrs }] = await Promise.all([
+    const [{ data: assignments, error: aErr }, { data: unassignedAddrs, error: uErr }] = await Promise.all([
       supabase.from('route_assignments').select('*').eq('plan_id', p.id),
       supabase.from('route_addresses')
         .select('id,address,city,state,zip,address_type,lat,lng')
         .eq('plan_id', p.id).eq('status', 'unassigned').neq('address_type', 'do_not_knock'),
     ]);
     if (aErr) { setLoadError(`Assignments query failed: ${aErr.message}`); setLoading(false); return; }
+    if (uErr) { setLoadError(`Addresses query failed: ${uErr.message}`); setLoading(false); return; }
 
     const unassigned = (unassignedAddrs ?? []).map(a => ({ ...a, unique_id: a.id }));
     const routes = (assignments ?? []).map(a => {
