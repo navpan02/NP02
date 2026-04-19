@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/index-CJJTwy76.js","assets/index-qVjsatRA.css"])))=>i.map(i=>d[i]);
+import{j as t,a,_ as r}from"./index-CJJTwy76.js";const n=a.lazy(()=>r(()=>import("./index-CJJTwy76.js").then(e=>e.h),__vite__mapDeps([0,1])));function o({session:e}){return t.jsx(a.Suspense,{fallback:t.jsx("div",{className:"p-8 text-center text-gray-400",children:"Loading route planner…"}),children:t.jsx(n,{portalSession:e})})}export{o as default};
