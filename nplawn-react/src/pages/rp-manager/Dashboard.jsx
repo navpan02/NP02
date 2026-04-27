@@ -8,12 +8,14 @@ const TodaysRoutes    = lazy(() => import('./tabs/TodaysRoutes'));
 const ConstraintsTab  = lazy(() => import('./tabs/ConstraintsTab'));
 const AgentsTab       = lazy(() => import('./tabs/AgentsTab'));
 const DrawRouteTab    = lazy(() => import('./tabs/DrawRouteTab'));
+const RouteHistoryTab = lazy(() => import('./tabs/RouteHistoryTab'));
 
 const TABS = [
   { id: 'routes',      label: "Today's Routes", icon: '🗺' },
-  { id: 'draw',        label: 'Add/Edit Route', icon: '✏️' },
-  { id: 'agents',      label: 'Agents',         icon: '👤' },
-  { id: 'constraints', label: 'Constraints',    icon: '⚙️' },
+  { id: 'draw',        label: 'Add/Edit Route',  icon: '✏️' },
+  { id: 'history',     label: 'Route History',   icon: '📋' },
+  { id: 'agents',      label: 'Agents',          icon: '👤' },
+  { id: 'constraints', label: 'Constraints',     icon: '⚙️' },
 ];
 
 export default function ManagerDashboard() {
@@ -36,10 +38,11 @@ export default function ManagerDashboard() {
           {/* Tab content */}
           <div className="flex-1 overflow-auto">
             <Suspense fallback={<div className="p-8 text-center text-gray-400">Loading…</div>}>
-              {activeTab === 'routes'      && <TodaysRoutes session={session} />}
-              {activeTab === 'draw'        && <DrawRouteTab session={session} />}
-              {activeTab === 'agents'      && <AgentsTab    session={session} />}
-              {activeTab === 'constraints' && <ConstraintsTab session={session} />}
+              {activeTab === 'routes'      && <TodaysRoutes    session={session} />}
+              {activeTab === 'draw'        && <DrawRouteTab    session={session} />}
+              {activeTab === 'history'     && <RouteHistoryTab session={session} />}
+              {activeTab === 'agents'      && <AgentsTab       session={session} />}
+              {activeTab === 'constraints' && <ConstraintsTab  session={session} />}
             </Suspense>
           </div>
         </div>
