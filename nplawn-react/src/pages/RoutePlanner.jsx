@@ -143,7 +143,7 @@ export default function RoutePlanner({ portalSession, portalClient } = {}) {
 
   // Load agents from DB on mount
   useEffect(() => {
-    supabase
+    client
       .from('agents')
       .select('id, name, email, start_address, start_lat, start_lng')
       .eq('active', true)
@@ -154,6 +154,7 @@ export default function RoutePlanner({ portalSession, portalClient } = {}) {
           setSelectedAgentIds(new Set(data.map(a => a.id)));
         }
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Selected agents that received no route from the optimizer ────────────────
@@ -270,7 +271,7 @@ export default function RoutePlanner({ portalSession, portalClient } = {}) {
 
     try {
       // Create plan record in DB
-      const { data: plan, error: planErr } = await supabase
+      const { data: plan, error: planErr } = await client
         .from('route_plans')
         .insert({
           plan_date: planDate,
@@ -501,7 +502,7 @@ export default function RoutePlanner({ portalSession, portalClient } = {}) {
           const newUrls = buildGoogleMapsUrls(route.stop_sequence ?? []);
           // Manually-created routes (agentless agents) have no DB record yet — skip
           if (!route.assignment_id) return { ...route, google_maps_urls: newUrls };
-          const { error } = await supabase
+          const { data: upRows, error } = await client
             .from('route_assignments')
             .update({
               stop_sequence: route.stop_sequence,
@@ -511,8 +512,10 @@ export default function RoutePlanner({ portalSession, portalClient } = {}) {
               est_hours: route.est_hours,
               google_maps_urls: newUrls,
             })
-            .eq('id', route.assignment_id);
+            .eq('id', route.assignment_id)
+            .select('id');
           if (error) throw new Error(`Failed to update ${route.agent_name}: ${error.message}`);
+          if (!upRows?.length) throw new Error(`Update blocked for ${route.agent_name} — check RLS policy or session permissions`);
           return { ...route, google_maps_urls: newUrls };
         }),
       );

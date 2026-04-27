@@ -25,6 +25,7 @@ function withTimeout(promise, ms = 15000) {
 
 export default function DrawRouteTab({ session }) {
   const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+  const client = session?.portalClient ?? supabase;
 
   const [addresses, setAddresses]   = useState([]);
   const [addrLoading, setAddrLoading] = useState(true);
@@ -92,14 +93,14 @@ export default function DrawRouteTab({ session }) {
     setAddrLoading(true);
     setAddresses([]);
 
-    supabase.from('agents').select('*').eq('active', true).order('name')
+    client.from('agents').select('*').eq('active', true).order('name')
       .then(({ data, error: err }) => {
         const list = (!err && data?.length) ? data : [];
         setAgents(list);
         if (list.length) setAgent(a => a || list[0].id);
       });
 
-    supabase.from('route_plans')
+    client.from('route_plans')
       .select('id')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
@@ -108,7 +109,7 @@ export default function DrawRouteTab({ session }) {
         if (!plans?.length) { setAddrLoading(false); return; }
         const planId = plans[0].id;
 
-        const { data: addrs, error: addrErr } = await supabase
+        const { data: addrs, error: addrErr } = await client
           .from('route_addresses')
           .select('id,address,city,state,zip,address_type,lat,lng,status,assignment_id')
           .eq('plan_id', planId)
@@ -123,7 +124,7 @@ export default function DrawRouteTab({ session }) {
         }
 
         // Fallback: derive from route_assignments stop_sequences
-        const { data: assignments, error: asgErr } = await supabase
+        const { data: assignments, error: asgErr } = await client
           .from('route_assignments')
           .select('id,stop_sequence')
           .eq('plan_id', planId);
@@ -182,7 +183,7 @@ export default function DrawRouteTab({ session }) {
     setGenerating(true); setError('');
 
     const agent = agents.find(a => a.id === selectedAgent);
-    const { data, error: fnErr } = await supabase.functions.invoke('route-optimize', {
+    const { data, error: fnErr } = await client.functions.invoke('route-optimize', {
       body: {
         addresses: filtered.map(a => ({
           unique_id: a.id, address: a.address, city: a.city ?? '',
@@ -209,7 +210,7 @@ export default function DrawRouteTab({ session }) {
 
       // Get or create today's plan for this branch
       let planId;
-      let planQuery = supabase.from('route_plans').select('id').eq('plan_date', today);
+      let planQuery = client.from('route_plans').select('id').eq('plan_date', today);
       if (session.branchId) planQuery = planQuery.eq('branch_id', session.branchId);
       const { data: existingPlan, error: planErr } = await withTimeout(
         planQuery.order('created_at', { ascending: false }).limit(1)
@@ -220,7 +221,7 @@ export default function DrawRouteTab({ session }) {
         planId = existingPlan[0].id;
       } else {
         const { data: newPlan, error: newPlanErr } = await withTimeout(
-          supabase.from('route_plans')
+          client.from('route_plans')
             .insert({ plan_date: today, constraints, branch_id: session.branchId, created_by: session.username })
             .select('id').single()
         );
@@ -230,7 +231,7 @@ export default function DrawRouteTab({ session }) {
 
       // Check for existing assignment for this agent today
       const { data: existingAssign } = await withTimeout(
-        supabase.from('route_assignments').select('id, stop_sequence, total_stops')
+        client.from('route_assignments').select('id, stop_sequence, total_stops')
           .eq('plan_id', planId).eq('agent_id', selectedAgent).maybeSingle()
       );
 
@@ -255,13 +256,14 @@ export default function DrawRouteTab({ session }) {
       };
 
       if (existingAssign) {
-        const { error: upErr } = await withTimeout(
-          supabase.from('route_assignments').update(payload).eq('id', existingAssign.id)
+        const { data: upRows, error: upErr } = await withTimeout(
+          client.from('route_assignments').update(payload).eq('id', existingAssign.id).select('id')
         );
         if (upErr) throw new Error(`Could not update assignment: ${upErr.message}`);
+        if (!upRows?.length) throw new Error('Update was blocked — check RLS policy or session permissions');
       } else {
         const { data: newAssign, error: insErr } = await withTimeout(
-          supabase.from('route_assignments').insert(payload).select('id').single()
+          client.from('route_assignments').insert(payload).select('id').single()
         );
         if (insErr) throw new Error(`Could not save assignment: ${insErr.message}`);
         assignId = newAssign.id;
@@ -269,7 +271,7 @@ export default function DrawRouteTab({ session }) {
 
       if (filtered.length) {
         const { error: addrErr } = await withTimeout(
-          supabase.from('route_addresses')
+          client.from('route_addresses')
             .update({ status: 'assigned', assignment_id: assignId })
             .in('id', filtered.map(a => a.id))
         );
