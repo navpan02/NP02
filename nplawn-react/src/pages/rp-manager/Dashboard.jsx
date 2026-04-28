@@ -21,6 +21,8 @@ const TABS = [
 export default function ManagerDashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('routes');
+  // Incrementing this key forces TodaysRoutes to remount and refetch after a save in DrawRouteTab
+  const [routesKey, setRoutesKey] = useState(0);
 
   return (
     <PortalAuthGuard portal="manager">
@@ -38,8 +40,8 @@ export default function ManagerDashboard() {
           {/* Tab content */}
           <div className="flex-1 overflow-auto">
             <Suspense fallback={<div className="p-8 text-center text-gray-400">Loading…</div>}>
-              {activeTab === 'routes'      && <TodaysRoutes    session={session} />}
-              {activeTab === 'draw'        && <DrawRouteTab    session={session} />}
+              {activeTab === 'routes'      && <TodaysRoutes    key={routesKey} session={session} />}
+              {activeTab === 'draw'        && <DrawRouteTab    session={session} onRouteSaved={() => setRoutesKey(k => k + 1)} />}
               {activeTab === 'history'     && <RouteHistoryTab session={session} />}
               {activeTab === 'agents'      && <AgentsTab       session={session} />}
               {activeTab === 'constraints' && <ConstraintsTab  session={session} />}

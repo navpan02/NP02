@@ -23,7 +23,7 @@ function withTimeout(promise, ms = 15000) {
   ]);
 }
 
-export default function DrawRouteTab({ session }) {
+export default function DrawRouteTab({ session, onRouteSaved }) {
   const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
   const client = session?.portalClient ?? supabase;
 
@@ -202,8 +202,11 @@ export default function DrawRouteTab({ session }) {
   };
 
   const saveRoute = async (mode) => {
-    if (!result?.routes?.[0]) { setError('No route to save — click Generate Route first.'); return; }
+    if (!result?.routes?.[0]) { setError('No route to save — generate a route first.'); return; }
     setSaveStatus('saving'); setConflict(null); setError('');
+
+    // Capture filtered selection at click time (closure may go stale after async awaits)
+    const selectedAddrs = filtered;
 
     try {
       const route = result.routes[0];
@@ -270,16 +273,24 @@ export default function DrawRouteTab({ session }) {
         assignId = newAssign.id;
       }
 
-      if (filtered.length) {
+      if (selectedAddrs.length) {
         const { error: addrErr } = await withTimeout(
           client.from('route_addresses')
             .update({ status: 'assigned', assignment_id: assignId })
-            .in('id', filtered.map(a => a.id))
+            .in('id', selectedAddrs.map(a => a.id))
         );
         if (addrErr) throw new Error(`Could not mark addresses as assigned: ${addrErr.message}`);
+
+        // Reflect assignment in local state so unassigned count updates immediately
+        setAddresses(prev => prev.map(a =>
+          selectedAddrs.find(f => f.id === a.id)
+            ? { ...a, status: 'assigned', assignment_id: assignId }
+            : a
+        ));
       }
 
       setSaveStatus('saved');
+      onRouteSaved?.();
     } catch (e) {
       setError(e.message ?? 'Save failed');
       setSaveStatus('idle');
@@ -295,6 +306,8 @@ export default function DrawRouteTab({ session }) {
   const unassignedMappable  = addresses.filter(a => a.status !== 'assigned' && a.address_type !== DNK_TYPE && a.lat && a.lng);
   const unassignedNoCoords  = addresses.filter(a => a.status !== 'assigned' && a.address_type !== DNK_TYPE && (!a.lat || !a.lng));
   const unassignedCount     = unassignedMappable.length;
+
+  const routeResult = result?.routes?.[0];
 
   return (
     <div className="flex h-full">
@@ -459,24 +472,38 @@ export default function DrawRouteTab({ session }) {
             {generating ? 'Generating…' : 'Generate Route'}
           </button>
 
-          {result && (
+          {result && !routeResult && (
+            <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="font-semibold mb-1">No route generated</p>
+              {(result.stats?.unassigned ?? 0) > 0
+                ? <p>All {result.stats.unassigned} addresses went unassigned — they may be too spread out for the current cluster radius ({constraints.cluster_radius_m}m). Try increasing Cluster Radius in constraints, or select more nearby addresses.</p>
+                : <p>No addresses could be assigned to a route.</p>
+              }
+            </div>
+          )}
+
+          {result && routeResult && (
             <>
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
-                ✓ {result.routes[0]?.total_stops} stops · {result.routes[0]?.total_miles?.toFixed(1)} mi · ~{result.routes[0]?.est_hours}h
+                <p>&#10003; {routeResult.total_stops} stops · {routeResult.total_miles?.toFixed(1)} mi · ~{routeResult.est_hours}h</p>
+                {(result.stats?.unassigned ?? 0) > 0 && (
+                  <p className="mt-1 text-amber-700">{result.stats.unassigned} address{result.stats.unassigned !== 1 ? 'es' : ''} could not be clustered and were skipped</p>
+                )}
               </div>
 
               <button
-                onClick={() => exportAgentCSV(result.routes[0], today)}
+                type="button"
+                onClick={() => exportAgentCSV(routeResult, today)}
                 className="w-full border border-gray-300 text-gray-700 text-sm font-medium py-2 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Export CSV
               </button>
 
-              {result.routes[0]?.google_maps_urls?.[0] && (
-                <a href={result.routes[0].google_maps_urls[0]} target="_blank" rel="noreferrer"
+              {routeResult.google_maps_urls?.[0] && (
+                <a href={routeResult.google_maps_urls[0]} target="_blank" rel="noreferrer"
                   className="block w-full border border-gray-300 text-gray-700 text-sm font-medium py-2 rounded-lg hover:bg-gray-50 text-center transition-colors"
                 >
-                  Open in Google Maps ↗
+                  Open in Google Maps &#8599;
                 </a>
               )}
 
@@ -484,7 +511,7 @@ export default function DrawRouteTab({ session }) {
                 <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 font-medium">{error}</p>
               )}
               {saveStatus === 'saved'
-                ? <div className="text-center text-sm text-green-700 font-semibold py-2 bg-green-50 border border-green-200 rounded-lg">✓ Route saved to today's plan</div>
+                ? <div className="text-center text-sm text-green-700 font-semibold py-2 bg-green-50 border border-green-200 rounded-lg">&#10003; Route saved to today's plan</div>
                 : (
                   <button
                     type="button"
