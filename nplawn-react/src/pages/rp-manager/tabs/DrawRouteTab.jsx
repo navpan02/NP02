@@ -202,7 +202,7 @@ export default function DrawRouteTab({ session }) {
   };
 
   const saveRoute = async (mode) => {
-    if (!result?.routes?.[0]) return;
+    if (!result?.routes?.[0]) { setError('No route to save — click Generate Route first.'); return; }
     setSaveStatus('saving'); setConflict(null); setError('');
 
     try {
@@ -222,7 +222,7 @@ export default function DrawRouteTab({ session }) {
       } else {
         const { data: newPlan, error: newPlanErr } = await withTimeout(
           client.from('route_plans')
-            .insert({ plan_date: today, constraints, branch_id: session.branchId, created_by: session.username })
+            .insert({ plan_date: today, constraints, branch_id: session.branchId, org_id: session.orgId, created_by: session.username })
             .select('id').single()
         );
         if (newPlanErr) throw new Error(`Could not create plan: ${newPlanErr.message}`);
@@ -253,6 +253,7 @@ export default function DrawRouteTab({ session }) {
         stop_sequence: stopSeq, cluster_sequence: route.clusters?.map(c => c.id) ?? [],
         total_stops: stopSeq.length, total_miles: route.total_miles,
         est_hours: route.est_hours, google_maps_urls: buildGoogleMapsUrls(stopSeq),
+        org_id: session.orgId, branch_id: session.branchId,
       };
 
       if (existingAssign) {
@@ -450,6 +451,7 @@ export default function DrawRouteTab({ session }) {
           {error && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
           <button
+            type="button"
             onClick={generate}
             disabled={generating || filtered.length === 0}
             className="w-full bg-green-700 text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-green-800 disabled:opacity-50 transition-colors"
@@ -478,10 +480,14 @@ export default function DrawRouteTab({ session }) {
                 </a>
               )}
 
+              {error && saveStatus === 'idle' && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 font-medium">{error}</p>
+              )}
               {saveStatus === 'saved'
-                ? <div className="text-center text-sm text-green-700 font-semibold py-2">✓ Route saved to today's plan</div>
+                ? <div className="text-center text-sm text-green-700 font-semibold py-2 bg-green-50 border border-green-200 rounded-lg">✓ Route saved to today's plan</div>
                 : (
                   <button
+                    type="button"
                     onClick={() => saveRoute()}
                     disabled={saveStatus === 'saving'}
                     className="w-full bg-gray-900 text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
